@@ -1,93 +1,197 @@
-# Field Medic Assistant
+# 🚑 MedicAssist — Tactical Field Medic Assistant
 
+> **Audio/Text → Structured FHIR JSON. Offline. CPU-only. No cloud. No compromise.**
 
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
+[![CPU-First](https://img.shields.io/badge/inference-CPU--only-green)]()
+[![Offline-First](https://img.shields.io/badge/offline-first-orange)]()
+[![FHIR R4](https://img.shields.io/badge/FHIR-R4-red)]()
 
-## Getting started
+---
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## The Problem
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+First responders, disaster relief workers, and combat medics must document patient vitals, injuries, and treatments **rapidly** — often in dead zones with **zero connectivity**. Paper forms get lost. Cloud apps fail. Every second of delay costs lives.
 
-## Add your files
+## The Solution
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+MedicAssist is a **PWA (Progressive Web App)** that runs entirely on a laptop or rugged tablet — no internet required after installation.
+
+1. **Record** — Medic speaks a 10–30 second voice memo into the device microphone.
+2. **Transcribe** — [Whisper.cpp](https://github.com/ggerganov/whisper.cpp) (`ggml-small.en` model, ~150 MB) transcribes audio **fully offline** using CPU WASM.
+3. **Parse** — [Phi-3-mini-4k-instruct](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf) quantised to Q4_K_M (~2.2 GB), served by **llama.cpp** (WASM or local binary), extracts structured clinical data.
+4. **Export** — Output is a valid **FHIR R4 Encounter + Patient + Condition + Observation** JSON bundle, ready for sync when connectivity returns.
+
+### Example Input
+```
+"Patient is a 30-year-old male, severe laceration on left thigh,
+bleeding heavily, applied tourniquet at 0915, triage level red."
+```
+
+### Example Output (FHIR R4 Bundle)
+```json
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "gender": "male",
+        "birthDate": "~1995"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "status": "in-progress",
+        "priority": { "coding": [{ "code": "A", "display": "Immediate / Red" }] }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "code": { "text": "Severe laceration, left thigh" },
+        "severity": { "text": "Severe" }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Procedure",
+        "code": { "text": "Tourniquet application" },
+        "performedDateTime": "T09:15:00"
+      }
+    }
+  ]
+}
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Reason |
+|---|---|---|
+| **Frontend** | Vanilla JS + HTML5 PWA | Zero framework overhead; works as installed app |
+| **Speech-to-Text** | [whisper.cpp](https://github.com/ggerganov/whisper.cpp) via WASM | CPU-only, ~150 MB model, runs in browser |
+| **LLM / NLP** | [llama.cpp](https://github.com/ggerganov/llama.cpp) WASM + Phi-3-mini-Q4_K_M | CPU-only, ~2.2 GB model |
+| **Model format** | GGUF (Q4_K_M quantisation) | Best CPU perf/accuracy tradeoff |
+| **Output schema** | FHIR R4 | Industry-standard EHR interoperability |
+| **Storage** | IndexedDB + Service Worker cache | Full offline persistence |
+| **CI/CD** | GitLab CI with local runner | All checks run locally, no SaaS dependency |
+
+---
+
+## Architecture
 
 ```
-cd existing_repo
-git remote add origin https://code.swecha.org/Prarthana_024/field-medic-assistant.git
-git branch -M main
-git push -uf origin main
+┌─────────────────────────────────────────────────┐
+│                  Browser / PWA                  │
+│                                                 │
+│  ┌──────────┐    ┌─────────────┐    ┌────────┐  │
+│  │Microphone│───▶│whisper.wasm │───▶│Transcript│ │
+│  │  Input   │    │(ggml-small) │    │  Text  │  │
+│  └──────────┘    └─────────────┘    └───┬────┘  │
+│                                         │        │
+│  ┌──────────┐                      ┌────▼────┐   │
+│  │ Text Box │─────────────────────▶│ Prompt  │   │
+│  │ (manual) │                      │ Builder │   │
+│  └──────────┘                      └────┬────┘   │
+│                                         │        │
+│                                    ┌────▼────┐   │
+│                                    │llama.cpp│   │
+│                                    │  WASM   │   │
+│                                    │Phi-3-mini│  │
+│                                    └────┬────┘   │
+│                                         │        │
+│                                    ┌────▼────┐   │
+│                                    │FHIR R4  │   │
+│                                    │  JSON   │   │
+│                                    │ Builder │   │
+│                                    └────┬────┘   │
+│                                         │        │
+│  ┌──────────────────────────────────────▼──────┐ │
+│  │       IndexedDB  (offline record store)     │ │
+│  └─────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────┘
+         │  (sync when online)
+         ▼
+    EHR / FHIR Server
 ```
 
-## Integrate with your tools
+---
 
-* [Set up project integrations](https://code.swecha.org/Prarthana_024/field-medic-assistant/-/settings/integrations)
+## Hardware Requirements
 
-## Collaborate with your team
+| Spec | Minimum | Recommended |
+|---|---|---|
+| RAM | 4 GB | 8 GB |
+| CPU | x86-64 or ARM64 | 4+ cores |
+| Disk | 3 GB free | 5 GB free |
+| GPU | ❌ Not used | ❌ Not used |
+| Internet | ❌ Not required | ❌ Not required |
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+Tested on: MacBook Pro M2, Dell Latitude i5 (8 GB RAM), Raspberry Pi 5.
 
-## Test and Deploy
+---
 
-Use the built-in continuous integration in GitLab.
+## Quick Start
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+```bash
+# Clone
+git clone https://gitlab.com/your-team/medic-assist.git
+cd medic-assist
 
-***
+# Download models (one-time, can be done before going into the field)
+./scripts/download_models.sh
 
-# Editing this README
+# Serve locally (no build step required)
+python3 -m http.server 8080
+# → open http://localhost:8080
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+# OR install as PWA: open in Chrome → "Install App"
+```
 
-## Suggestions for a good README
+> **Offline demo:** Open app, disable Wi-Fi/ethernet, record audio → structured JSON output appears with no network activity.
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+---
 
-## Name
-Choose a self-explaining name for your project.
+## Repository Structure
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+```
+medic-assist/
+├── README.md
+├── LICENSE                    # GPL-3.0
+├── CONTRIBUTING.md
+├── CHANGELOG.md
+├── .gitlab-ci.yml
+├── .pre-commit-config.yaml
+├── spec/
+│   ├── functional-spec.md
+│   ├── fhir-schema.json
+│   ├── prompt-template.md
+│   └── wireframes.md
+├── docs/
+│   ├── architecture.md
+│   ├── model-selection.md
+│   └── work-division.md
+├── src/
+│   ├── index.html
+│   ├── app.js
+│   ├── whisper-runner.js
+│   ├── llm-runner.js
+│   ├── fhir-builder.js
+│   ├── db.js
+│   └── sw.js                  # Service Worker
+├── models/                    # .gitignore'd; downloaded by script
+│   ├── ggml-small.en.bin
+│   └── phi-3-mini-q4_k_m.gguf
+└── scripts/
+    └── download_models.sh
+```
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+---
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+GNU General Public License v3.0 — see [LICENSE](LICENSE).
