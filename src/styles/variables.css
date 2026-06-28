@@ -1,0 +1,63 @@
+:root {
+
+  /* ===== Colors ===== */
+
+  --primary: #d32f2f;
+  --primary-dark: #b71c1c;
+  --secondary: #1565c0;
+
+  --success: #2e7d32;
+  --warning: #f9a825;
+  --danger: #c62828;
+
+  --background: #f4f7fb;
+  --surface: #ffffff;
+
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+
+  --border: #e5e7eb;
+
+  /* ===== Status ===== */
+
+  --offline: #2e7d32;
+  --processing: #1565c0;
+  --waiting: #9ca3af;
+
+  /* ===== Shadows ===== */
+
+  --shadow-sm: 0 2px 6px rgba(0,0,0,.08);
+
+  --shadow-md: 0 8px 20px rgba(0,0,0,.08);
+
+  --shadow-lg: 0 15px 35px rgba(0,0,0,.12);
+
+  /* ===== Radius ===== */
+
+  --radius-sm: 8px;
+
+  --radius-md: 14px;
+
+  --radius-lg: 20px;
+
+  /* ===== Font ===== */
+
+  --font-family: "Inter", sans-serif;
+
+  /* ===== Spacing ===== */
+
+  --space-xs: .4rem;
+
+  --space-sm: .8rem;
+
+  --space-md: 1.2rem;
+
+  --space-lg: 2rem;
+
+  --space-xl: 3rem;
+
+  /* ===== Transition ===== */
+
+  --transition: .3s ease;
+
+}

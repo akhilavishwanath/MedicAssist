@@ -1,0 +1,98 @@
+/* ===== RESET ===== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+html{
+
+    scroll-behavior:smooth;
+
+}
+
+body{
+
+    font-family:var(--font-family);
+
+    background:var(--background);
+
+    color:var(--text-primary);
+
+    min-height:100vh;
+
+    line-height:1.6;
+
+}
+
+/* ===== LINKS ===== */
+
+a{
+
+    text-decoration:none;
+
+    color:inherit;
+
+}
+
+/* ===== BUTTON ===== */
+
+button{
+
+    font-family:inherit;
+
+    cursor:pointer;
+
+    border:none;
+
+}
+
+/* ===== INPUT ===== */
+
+input,
+textarea{
+
+    font-family:inherit;
+
+    outline:none;
+
+}
+
+textarea{
+
+    resize:vertical;
+
+}
+
+/* ===== IMAGE ===== */
+
+img{
+
+    max-width:100%;
+
+    display:block;
+
+}
+
+/* ===== SCROLLBAR ===== */
+
+::-webkit-scrollbar{
+
+    width:8px;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+    background:#cfd8dc;
+
+    border-radius:10px;
+
+}
+
+::-webkit-scrollbar-track{
+
+    background:#f1f1f1;
+
+}

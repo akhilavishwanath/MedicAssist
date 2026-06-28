@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MedicAssist | Tactical Field Medic Assistant</title>
+
+    <meta name="description"
+        content="Offline CPU-first AI application that converts unstructured medical notes into structured FHIR R4 JSON.">
+
+    <meta name="theme-color" content="#C62828">
+
+    <link rel="manifest" href="./manifest.json">
+    <link rel="stylesheet" href="./styles.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body>
+
+<header class="navbar">
+    <div class="logo">
+        <i class="fa-solid fa-truck-medical"></i>
+        <div>
+            <h1>MedicAssist</h1>
+            <p>Tactical Field Medic Assistant</p>
+        </div>
+    </div>
+
+    <div class="status-badges">
+        <span class="badge offline">🟢 Offline Ready</span>
+        <span class="badge cpu">💻 CPU First</span>
+    </div>
+</header>
+
+<section class="hero">
+    <div class="hero-content">
+        <h2>Transform Unstructured Medical Data into FHIR R4 JSON</h2>
+
+        <p>
+            MedicAssist enables field medics, first responders and disaster
+            relief teams to convert audio or text into structured healthcare
+            records completely offline using Whisper.cpp and Phi-3 Mini.
+        </p>
+
+        <div class="feature-tags">
+            <span>🎤 Whisper.cpp</span>
+            <span>🤖 Phi-3 Mini</span>
+            <span>📄 FHIR R4</span>
+            <span>🌐 Offline</span>
+            <span>💻 CPU Only</span>
+        </div>
+    </div>
+</section>
+
+<main class="container">
+<section class="left-panel">
+
+    <div class="card">
+
+        <div class="card-header">
+            <i class="fa-solid fa-microphone"></i>
+            <h2>Medical Input</h2>
+        </div>
+
+        <p class="subtitle">
+            Record audio or enter medical notes manually.
+        </p>
+
+        <div class="audio-controls">
+            <button id="startRecording" class="btn success">
+                <i class="fa-solid fa-play"></i>
+                Start Recording
+            </button>
+
+            <button id="stopRecording" class="btn danger">
+                <i class="fa-solid fa-stop"></i>
+                Stop Recording
+            </button>
+        </div>
+
+        <div class="upload-area">
+
+            <label>Upload Audio</label>
+
+          <input
+             type="file"
+             id="audioUpload"
+             accept="audio/*,.wav,.mp3,.webm,.m4a">
+
+        </div>
+
+        <div class="divider">
+            <span>OR</span>
+        </div>
+
+        <label class="section-label">
+            Medical Notes
+        </label>
+
+        <textarea
+            id="medicalText"
+            placeholder="Example:
+
+Patient is a 30-year-old male.
+
+Severe laceration on left thigh.
+
+Heavy bleeding.
+
+Tourniquet applied at 09:15.
+
+Triage Level Red."></textarea>
+
+        <button
+            id="generateBtn"
+            class="btn primary">
+
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+
+            Generate FHIR JSON
+
+        </button>
+
+    </div>
+
+    <div class="card">
+
+        <div class="card-header">
+
+            <i class="fa-solid fa-gears"></i>
+
+            <h2>Processing Status</h2>
+
+        </div>
+
+        <div class="status-container">
+
+            <div class="status-item">
+
+                <span>Speech Recognition</span>
+
+                <span id="speechStatus">Waiting...</span>
+
+            </div>
+
+            <div class="status-item">
+
+                <span>Clinical Extraction</span>
+
+                <span id="llmStatus">Waiting...</span>
+
+            </div>
+
+            <div class="status-item">
+
+                <span>FHIR Generation</span>
+
+                <span id="fhirStatus">Waiting...</span>
+
+            </div>
+
+        </div>
+
+    </div>
+    <!-- Transcript -->
+    <div class="card">
+
+        <div class="card-header">
+            <i class="fa-solid fa-file-lines"></i>
+            <h2>Transcript</h2>
+        </div>
+
+        <pre id="transcriptOutput" class="output-box">
+            Waiting for transcript...
+        </pre>
+
+    </div>
+
+</section>
+   <aside class="right-panel">
+
+    <div class="card">
+
+        <div class="card-header">
+
+            <i class="fa-solid fa-file-code"></i>
+
+            <h2>FHIR JSON Output</h2>
+
+        </div>
+
+        <pre
+            id="jsonOutput"
+            class="output-box">
+
+Waiting for medical input...
+
+        </pre>
+
+        <div class="audio-controls">
+
+            <button id="copyJson" class="btn primary">
+
+                Copy JSON
+
+            </button>
+
+            <button id="downloadJson" class="btn success">
+
+                Download
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <div class="card-header">
+
+            <i class="fa-solid fa-folder-open"></i>
+
+            <h2>Saved Records</h2>
+
+        </div>
+
+        <div id="recordsList">
+
+            <p>No records saved.</p>
+
+        </div>
+
+    </div>
+
+</aside>
+
+</main>
+
+<div id="toast-container"></div>
+
+<div id="loading-overlay" class="hidden">
+    <div class="loader"></div>
+    <p>Processing Medical Record...</p>
+</div>
+
+<script type="module" src="./app.js"></script>
+</body>
+
+
+</html>
