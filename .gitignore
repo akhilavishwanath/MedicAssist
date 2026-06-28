@@ -1,0 +1,43 @@
+# Environment
+.env
+.env.*
+
+# Dependencies
+node_modules/
+
+# Build
+dist/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# AI Models
+models/
+*.gguf
+*.bin
+
+# Audio Files
+uploads/
+*.wav
+*.mp3
+*.webm
+
+# Database
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+coverage/
+.cache/
