@@ -1,125 +1,180 @@
 # MedicAssist — Work Division Plan
 
-> Assumes a **3-person team**. Adjust column assignments if team size differs.
-
----
+**Team Size:** 2 Members
 
 ## Team Roles
 
-| Person | Role | Primary Skills |
-|--------|------|----------------|
-| **Dev A** — Lead / ML | Model integration, architecture, spec | Python, JS, WASM, FHIR |
-| **Dev B** — Frontend | PWA, UI, audio, offline storage | HTML/CSS/JS, IndexedDB, Service Workers |
-| **Dev C** — DevOps / Backend | CI/CD, FHIR builder, schema validation | GitLab CI, JSON Schema, shell scripting |
+| Person                                   | Role                        | Primary Responsibilities                                                                                                               |
+| ---------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Developer A – AI & Backend Lead**      | Model Integration & Backend | Whisper.cpp integration, Phi-3-mini integration, FHIR JSON builder, prompt engineering, schema validation, architecture, documentation |
+| **Developer B – Frontend & DevOps Lead** | PWA & Infrastructure        | UI development, audio recording, IndexedDB, Service Worker, PWA, GitLab CI/CD, testing, documentation                                  |
 
 ---
 
-## Phase 1 — Plan & Spec (→ 10:00 AM)
+# Phase 1 — Plan & Specification (Before 10:00 AM)
 
-| Issue | Task | Owner | Est |
-|-------|------|-------|-----|
-| #1 | Repo init, folder structure, GitLab runner | Dev C | 30 min |
-| #2 | Functional spec, FHIR schema, prompt template | Dev A | 45 min |
-| #3 | Architecture doc, model selection doc | Dev A | 20 min |
-| #4 | CONTRIBUTING.md, CHANGELOG bootstrap | Dev C | 15 min |
-| — | Wireframes.md | Dev B | 20 min |
-
-**All 3 devs work in parallel. Dev A leads spec; Dev C leads repo setup; Dev B drafts wireframes.**
+| Issue | Task                                                      | Owner       | Estimate |
+| ----- | --------------------------------------------------------- | ----------- | -------- |
+| #1    | Repository setup, folder structure, GitLab initialization | Developer B | 20 min   |
+| #2    | Functional specification & architecture                   | Developer A | 30 min   |
+| #3    | FHIR schema & prompt template                             | Developer A | 30 min   |
+| #4    | README, CONTRIBUTING, CHANGELOG, LICENSE                  | Developer B | 20 min   |
+| #5    | Work division & issue planning                            | Both        | 15 min   |
 
 ---
 
-## Phase 2 — MVP (→ Lunch)
+# Phase 2 — MVP (Before Lunch)
 
-```
-Timeline (≈ 3 hours)
+## Developer A (AI & Backend)
 
-DEV A (ML):       [#7 Whisper WASM]────────[#8 Phi-3 WASM]────[#12 Integration]
-DEV B (Frontend): [#5 PWA Shell]──[#6 Audio UI]──[#11 Dashboard]──[#12 Integration]
-DEV C (Backend):  [#9 FHIR Builder]──[#10 IndexedDB]──────────────[#12 Integration]
-```
+* Integrate Whisper.cpp (CPU-only)
+* Integrate Phi-3-mini with llama.cpp
+* Design prompt for structured extraction
+* Generate FHIR R4 Bundle
+* Validate JSON against schema
+* Expose AI APIs to frontend
 
-| Issue | Task | Owner | Est |
-|-------|------|-------|-----|
-| #5 | PWA shell, manifest, service worker | Dev B | 45 min |
-| #6 | Audio recording UI, waveform | Dev B | 30 min |
-| #7 | Whisper.cpp WASM integration | Dev A | 60 min |
-| #8 | Phi-3-mini llama.cpp WASM | Dev A | 60 min |
-| #9 | FHIR builder + AJV validation | Dev C | 45 min |
-| #10 | IndexedDB record store | Dev C | 30 min |
-| #11 | Dashboard, record list, export | Dev B | 30 min |
-| #12 | End-to-end wiring + demo records | All | 30 min |
-
-**Integration point:** Dev A exposes `window.whisperTranscribe(audioBuffer)` and `window.llmExtract(text)` as async functions. Dev B calls them from `app.js`. Dev C's `fhir-builder.js` and `db.js` are consumed by Dev B's UI.
+Estimated Time: **3 Hours**
 
 ---
 
-## Phase 3 — Repo Audit (→ 3 PM)
+## Developer B (Frontend & DevOps)
 
-| Issue | Task | Owner | Est |
-|-------|------|-------|-----|
-| #13 | Pre-commit hooks (5 checks) | Dev C | 30 min |
-| #14 | GitLab CI pipeline (10+ checks, local runner) | Dev C | 45 min |
-| #15 | README polish, badges, CHANGELOG | Dev A | 20 min |
-| — | Fix any CI failures | All | 30 min |
+* Build PWA interface
+* Audio recording using MediaRecorder
+* Text input interface
+* Record history using IndexedDB
+* Export JSON
+* Service Worker & offline cache
+* Integrate backend APIs
+* Local GitLab Runner setup
 
----
-
-## Interface Contracts
-
-### whisper-runner.js (Dev A → Dev B)
-```js
-// Returns promise<string> — the transcript text
-window.whisperTranscribe = async (audioBuffer, onProgress) => { ... }
-// onProgress(percent: number, stage: string)
-```
-
-### llm-runner.js (Dev A → Dev C)
-```js
-// Returns promise<object> — parsed intermediate JSON (not yet FHIR)
-window.llmExtract = async (transcriptText, onProgress) => { ... }
-// Output shape defined in spec/prompt-template.md
-```
-
-### fhir-builder.js (Dev C → Dev B)
-```js
-// Returns FHIR R4 Bundle object or throws ValidationError
-import { buildFhirBundle, validateFhirBundle } from './fhir-builder.js';
-```
-
-### db.js (Dev C → Dev B)
-```js
-import { saveRecord, listRecords, getRecord, deleteRecord } from './db.js';
-// Record shape: { id, timestamp, triageLevel, fhirBundle, rawNote }
-```
+Estimated Time: **3 Hours**
 
 ---
 
-## Dependency Graph
+# Integration (Both)
 
-```
-index.html
-    └── app.js
-          ├── whisper-runner.js    (Dev A)
-          ├── llm-runner.js        (Dev A)
-          ├── fhir-builder.js      (Dev C)
-          └── db.js                (Dev C)
+| Task                                 | Owner |
+| ------------------------------------ | ----- |
+| Connect frontend with Whisper.cpp    | Both  |
+| Connect Phi-3 output to FHIR builder | Both  |
+| End-to-end testing                   | Both  |
+| Prepare demo records                 | Both  |
 
-sw.js           (Dev B)
-manifest.json   (Dev B)
-```
-
-**Critical path:** `#7 Whisper` and `#8 LLM` are the longest tasks. Dev A starts these at 10:00 AM sharp. Dev B and Dev C can build their modules against mock data while models load.
+Estimated Time: **45 minutes**
 
 ---
 
-## Mock Data Strategy (unblocks parallel work)
+# Phase 3 — Repository Audit (Before 3:00 PM)
 
-Dev B and Dev C can use this mock until Dev A's WASM modules are ready:
+| Issue | Task                            | Owner       |
+| ----- | ------------------------------- | ----------- |
+| #6    | Configure pre-commit hooks      | Developer B |
+| #7    | GitLab CI pipeline (10+ checks) | Developer B |
+| #8    | Documentation review            | Developer A |
+| #9    | Security scan & lint fixes      | Both        |
+| #10   | Final repository audit          | Both        |
 
-```js
-// In app.js — replace with real calls once ready
-const MOCK_TRANSCRIPT = "Patient is a 30-year-old male, severe laceration on left thigh...";
-const MOCK_LLM_OUTPUT = { patient: { estimatedAge: 30, gender: "male" }, ... };
+---
+
+# Module Ownership
+
+## Developer A
+
+* whisper-runner.js
+* llm-runner.js
+* fhir-builder.js
+* Prompt template
+* FHIR validation
+
+## Developer B
+
+* index.html
+* app.js
+* db.js
+* sw.js
+* manifest.json
+* styles.css
+* GitLab CI
+* Documentation
+
+---
+
+# Integration Interfaces
+
+### whisper-runner.js
+
+```javascript
+window.whisperTranscribe = async (audioBuffer) => {
+    // Returns transcript text
+}
 ```
 
-Switch to live functions in issue #12.
+### llm-runner.js
+
+```javascript
+window.llmExtract = async (transcriptText) => {
+    // Returns structured clinical JSON
+}
+```
+
+### fhir-builder.js
+
+```javascript
+buildFhirBundle(data)
+validateFhirBundle(bundle)
+```
+
+### db.js
+
+```javascript
+saveRecord()
+listRecords()
+getRecord()
+deleteRecord()
+```
+
+---
+
+# Development Strategy
+
+To enable parallel development, the frontend uses mock transcript and mock JSON responses until Whisper.cpp and Phi-3 integration are complete.
+
+Once the AI modules are ready, the mock functions are replaced with live inference calls without changing the frontend workflow.
+
+---
+
+# Deliverables
+
+### Phase 1
+
+* Project specification
+* Repository structure
+* Issue tracker
+* Work allocation
+
+### Phase 2
+* Offline PWA
+* Audio transcription
+* Phi-3 extraction
+* FHIR JSON generation
+* Local storage
+
+###Phase 3
+* CI/CD (10+ checks)
+* Documentation
+* Security scanning
+* Repository compliance
+* Offline PWA
+* Audio transcription
+* Phi-3 extraction
+* FHIR JSON generation
+* Local storage
+
+### Phase 3
+
+* CI/CD (10+ checks)
+* Documentation
+* Security scanning
+* Repository compliance
