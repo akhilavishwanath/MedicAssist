@@ -1,4 +1,3 @@
-console.log("🚑 MedicAssist app.js loaded");
 import { showToast } from "./components/utils.js";
 import {
     updateSpeechStatus,
@@ -22,7 +21,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const generateBtn = document.getElementById("generateBtn");
     const medicalText = document.getElementById("medicalText");
 
-    // Initial State
     resetStatus();
     clearTranscript();
     clearFHIR();
@@ -36,16 +34,12 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Show loading
-        document.getElementById("loading-overlay").classList.remove("hidden");
-
         updateSpeechStatus("Completed");
         updateLLMStatus("Processing...");
         updateFHIRStatus("Generating...");
 
         showTranscript(input);
 
-        // Mock FHIR JSON
         const mockFHIR = {
             resourceType: "Bundle",
             type: "collection",
@@ -55,12 +49,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     resource: {
                         resourceType: "Patient",
                         gender: "unknown"
-                    }
-                },
-                {
-                    resource: {
-                        resourceType: "Encounter",
-                        status: "in-progress"
                     }
                 },
                 {
@@ -81,11 +69,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             showFHIR(mockFHIR);
 
-            document.getElementById("loading-overlay").classList.add("hidden");
-
             showToast("FHIR JSON Generated Successfully!");
 
-        }, 1200);
+        }, 1000);
 
     });
 
