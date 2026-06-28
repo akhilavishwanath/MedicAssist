@@ -1,0 +1,203 @@
+/* ==========================================
+   LOADER
+========================================== */
+
+@keyframes spin {
+
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+
+}
+
+/* ==========================================
+   FADE IN
+========================================== */
+
+@keyframes fadeIn {
+
+  from {
+
+    opacity: 0;
+
+    transform: translateY(15px);
+
+  }
+
+  to {
+
+    opacity: 1;
+
+    transform: translateY(0);
+
+  }
+
+}
+
+/* ==========================================
+   SLIDE IN
+========================================== */
+
+@keyframes slideInRight {
+
+  from {
+
+    opacity: 0;
+
+    transform: translateX(40px);
+
+  }
+
+  to {
+
+    opacity: 1;
+
+    transform: translateX(0);
+
+  }
+
+}
+
+/* ==========================================
+   POP
+========================================== */
+
+@keyframes pop {
+
+  0% {
+
+    transform: scale(.8);
+
+    opacity: 0;
+
+  }
+
+  100% {
+
+    transform: scale(1);
+
+    opacity: 1;
+
+  }
+
+}
+
+/* ==========================================
+   CARD ANIMATION
+========================================== */
+
+.card {
+
+  animation: fadeIn .6s ease;
+
+}
+
+/* ==========================================
+   BUTTON HOVER
+========================================== */
+
+.btn {
+
+  transition: .25s ease;
+
+}
+
+.btn:hover {
+
+  transform: translateY(-3px);
+
+  box-shadow: var(--shadow-md);
+
+}
+
+.btn:active {
+
+  transform: scale(.98);
+
+}
+
+/* ==========================================
+   RECORD CARD
+========================================== */
+
+.record-card {
+
+  transition: .3s ease;
+
+}
+
+.record-card:hover {
+
+  transform: translateY(-5px);
+
+  box-shadow: var(--shadow-lg);
+
+}
+
+/* ==========================================
+   OUTPUT BOX
+========================================== */
+
+.output-box {
+
+  animation: fadeIn .4s ease;
+
+}
+
+/* ==========================================
+   BADGES
+========================================== */
+
+.badge {
+
+  transition: .25s ease;
+
+}
+
+.badge:hover {
+
+  transform: scale(1.05);
+
+}
+
+/* ==========================================
+   HERO TAGS
+========================================== */
+
+.feature-tags span {
+
+  transition: .25s ease;
+
+}
+
+.feature-tags span:hover {
+
+  transform: translateY(-3px);
+
+  background: rgba(255,255,255,.25);
+
+}
+
+/* ==========================================
+   TOAST
+========================================== */
+
+.toast {
+
+  animation: slideInRight .4s ease;
+
+}
+
+/* ==========================================
+   LOADING OVERLAY
+========================================== */
+
+#loading-overlay {
+
+  animation: fadeIn .25s ease;
+
+}
