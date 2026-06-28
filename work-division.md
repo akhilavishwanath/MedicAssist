@@ -161,17 +161,6 @@ Once the AI modules are ready, the mock functions are replaced with live inferen
 * FHIR JSON generation
 * Local storage
 
-###Phase 3
-* CI/CD (10+ checks)
-* Documentation
-* Security scanning
-* Repository compliance
-* Offline PWA
-* Audio transcription
-* Phi-3 extraction
-* FHIR JSON generation
-* Local storage
-
 ### Phase 3
 
 * CI/CD (10+ checks)
