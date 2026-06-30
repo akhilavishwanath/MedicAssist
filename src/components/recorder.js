@@ -13,42 +13,45 @@ export async function startRecording() {
 
     try {
 
-        stream = await navigator.mediaDevices.getUserMedia({
-            audio: true
-        });
-
-        mediaRecorder = new MediaRecorder(stream);
+        // Stop previous microphone if running
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
 
         audioChunks = [];
         seconds = 0;
 
         updateTimer();
 
-        timer = setInterval(() => {
+        stream = await navigator.mediaDevices.getUserMedia({
+            audio: true
+        });
 
-            seconds++;
-
-            updateTimer();
-
-        }, 1000);
+        mediaRecorder = new MediaRecorder(stream);
 
         mediaRecorder.ondataavailable = (event) => {
 
-            if (event.data.size > 0) {
-
+            if (event.data && event.data.size > 0) {
                 audioChunks.push(event.data);
-
             }
 
         };
 
         mediaRecorder.start();
 
+        timer = setInterval(() => {
+
+            seconds++;
+            updateTimer();
+
+        }, 1000);
+
         return true;
 
-    } catch (err) {
+    } catch (error) {
 
-        console.error(err);
+        console.error(error);
 
         alert("Unable to access microphone.");
 
@@ -91,7 +94,6 @@ export function resumeRecording() {
         timer = setInterval(() => {
 
             seconds++;
-
             updateTimer();
 
         }, 1000);
@@ -120,8 +122,13 @@ export function stopRecording() {
 
         mediaRecorder.onstop = () => {
 
+            const mimeType =
+                mediaRecorder.mimeType ||
+                audioChunks[0]?.type ||
+                "audio/webm";
+
             const blob = new Blob(audioChunks, {
-                type: mediaRecorder.mimeType
+                type: mimeType
             });
 
             const url = URL.createObjectURL(blob);
@@ -130,14 +137,16 @@ export function stopRecording() {
 
                 stream.getTracks().forEach(track => track.stop());
 
+                stream = null;
+
             }
 
-            resolve({
+            mediaRecorder = null;
 
+            resolve({
                 blob,
                 url,
                 duration: seconds
-
             });
 
         };
@@ -158,7 +167,7 @@ function updateTimer() {
 
     const secs = String(seconds % 60).padStart(2, "0");
 
-    const timerElement = document.getElementById("recordingTimer");
+    const timerElement = document.getElementById("recordingTime");
 
     if (timerElement) {
 
