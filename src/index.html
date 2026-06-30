@@ -106,34 +106,24 @@
     </span>
 
 </div>
-        
-        <!-- Hidden until recording finishes -->
+
 <div id="recordingResult" class="hidden">
 
     <div class="success-box">
+
         ✅ Recording Completed
         <span id="recordDuration"></span>
+
     </div>
 
     <audio id="audioPreview" controls></audio>
 
-    <div class="audio-controls">
-
-        <button id="submitAudio" class="btn primary">
-            <i class="fa-solid fa-cloud-arrow-up"></i>
-            Submit Audio
-        </button>
-
-        <button id="recordAgain" class="btn secondary">
-            <i class="fa-solid fa-rotate-right"></i>
-            Record Again
-        </button>
-
-    </div>
+    <button id="recordAgain" class="btn secondary">
+        🔄 Record Again
+    </button>
 
 </div>
 
-<!-- Always visible -->
 <div class="upload-area">
 
     <label>Upload Audio</label>
@@ -141,14 +131,12 @@
     <input
         type="file"
         id="audioUpload"
-        accept="audio/*,.wav,.mp3,.webm,.m4a,.mp4">
+        accept="audio/*,.wav,.mp3,.webm,.m4a">
 
 </div>
-
-<div class="divider">
-    <span>OR</span>
-</div>
-        
+        <div class="divider">
+            <span>OR</span>
+        </div>
 
         <label class="section-label">
             Medical Notes
@@ -177,8 +165,9 @@ Triage Level Red."></textarea>
             Generate FHIR JSON
 
         </button>
+
     </div>
-    
+
     <div class="card">
 
         <div class="card-header">

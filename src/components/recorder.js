@@ -5,53 +5,73 @@ let stream = null;
 let timer = null;
 let seconds = 0;
 
-// --------------------------
-// Start Recording
-// --------------------------
-
 export async function startRecording() {
 
     try {
 
-        // Stop previous microphone if running
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
-        }
+        stream = await navigator.mediaDevices.getUserMedia({
+            audio: true
+        });
+
+      const options = {};
+     const supportedTypes = [
+    "audio/mp4",
+    "audio/webm",
+    ""
+];
+
+let selectedType = "";
+
+for (const type of supportedTypes) {
+
+    if (type === "" || MediaRecorder.isTypeSupported(type)) {
+
+        selectedType = type;
+
+        break;
+
+    }
+
+}
+
+mediaRecorder = selectedType
+    ? new MediaRecorder(stream, { mimeType: selectedType })
+    : new MediaRecorder(stream);
+
+console.log("Recorder MIME:", mediaRecorder.mimeType);
+
+mediaRecorder = new MediaRecorder(stream, options);
+console.log("Recorder MIME Type:", mediaRecorder.mimeType);
 
         audioChunks = [];
         seconds = 0;
 
         updateTimer();
 
-        stream = await navigator.mediaDevices.getUserMedia({
-            audio: true
-        });
-
-        mediaRecorder = new MediaRecorder(stream);
+        timer = setInterval(() => {
+            seconds++;
+            updateTimer();
+        }, 1000);
 
         mediaRecorder.ondataavailable = (event) => {
 
-            if (event.data && event.data.size > 0) {
-                audioChunks.push(event.data);
-            }
+    console.log("Chunk:", event.data.type, event.data.size);
 
-        };
+    if (event.data.size > 0) {
+
+        audioChunks.push(event.data);
+
+    }
+
+};
 
         mediaRecorder.start();
 
-        timer = setInterval(() => {
-
-            seconds++;
-            updateTimer();
-
-        }, 1000);
-
         return true;
 
-    } catch (error) {
+    } catch (err) {
 
-        console.error(error);
+        console.error(err);
 
         alert("Unable to access microphone.");
 
@@ -60,10 +80,6 @@ export async function startRecording() {
     }
 
 }
-
-// --------------------------
-// Pause
-// --------------------------
 
 export function pauseRecording() {
 
@@ -79,10 +95,6 @@ export function pauseRecording() {
 
 }
 
-// --------------------------
-// Resume
-// --------------------------
-
 export function resumeRecording() {
 
     if (!mediaRecorder) return;
@@ -94,6 +106,7 @@ export function resumeRecording() {
         timer = setInterval(() => {
 
             seconds++;
+
             updateTimer();
 
         }, 1000);
@@ -101,10 +114,6 @@ export function resumeRecording() {
     }
 
 }
-
-// --------------------------
-// Stop
-// --------------------------
 
 export function stopRecording() {
 
@@ -122,26 +131,20 @@ export function stopRecording() {
 
         mediaRecorder.onstop = () => {
 
-            const mimeType =
-                mediaRecorder.mimeType ||
-                audioChunks[0]?.type ||
-                "audio/webm";
-
             const blob = new Blob(audioChunks, {
-                type: mimeType
-            });
+    type: mediaRecorder.mimeType || audioChunks[0]?.type || "application/octet-stream"
+});
 
-            const url = URL.createObjectURL(blob);
+console.log("Recorder MIME:", mediaRecorder.mimeType);
+console.log("Blob MIME:", blob.type);
+console.log("Blob Size:", blob.size);
 
+const url = URL.createObjectURL(blob);
             if (stream) {
 
                 stream.getTracks().forEach(track => track.stop());
 
-                stream = null;
-
             }
-
-            mediaRecorder = null;
 
             resolve({
                 blob,
@@ -150,21 +153,16 @@ export function stopRecording() {
             });
 
         };
-
+        mediaRecorder.requestData();
         mediaRecorder.stop();
 
     });
 
 }
 
-// --------------------------
-// Timer
-// --------------------------
-
 function updateTimer() {
 
     const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
-
     const secs = String(seconds % 60).padStart(2, "0");
 
     const timerElement = document.getElementById("recordingTime");

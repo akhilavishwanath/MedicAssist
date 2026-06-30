@@ -1,18 +1,4 @@
-import { buildFhirBundle } from "./fhir-builder.js";
-import { extractMedicalNote, transcribeAudio } from "./api-client.js";
-
-import {
-    startRecording,
-    stopRecording,
-    pauseRecording,
-    resumeRecording
-} from "./components/recorder.js";
-
 import { showToast } from "./components/utils.js";
-import { copyJsonToClipboard, downloadJsonFile } from "./components/exportUtils.js";
-import { saveRecord } from "./db.js";
-import { renderRecordsList } from "./components/records.js";
-
 import {
     updateSpeechStatus,
     updateLLMStatus,
@@ -24,6 +10,12 @@ import {
     showTranscript,
     clearTranscript
 } from "./components/transcript.js";
+import {
+    startRecording,
+    stopRecording,
+    pauseRecording,
+    resumeRecording
+} from "./components/recorder.js";
 
 import {
     showFHIR,
@@ -32,386 +24,175 @@ import {
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    // -------------------------
-    // Elements
-    // -------------------------
+    const generateBtn = document.getElementById("generateBtn");
+    const medicalText = document.getElementById("medicalText");
+    
 
-    const startBtn = document.getElementById("startRecording");
-    const stopBtn = document.getElementById("stopRecording");
-    const pauseBtn = document.getElementById("pauseRecording");
+const startBtn = document.getElementById("startRecording");
+const stopBtn = document.getElementById("stopRecording");
+const pauseBtn = document.getElementById("pauseRecording");
 
-    const againBtn = document.getElementById("recordAgain");
-    const submitBtn = document.getElementById("submitAudio");
+const audioPlayer = document.getElementById("audioPreview");
+const recordingResult = document.getElementById("recordingResult");
+const indicator = document.getElementById("recordingIndicator");
+const duration = document.getElementById("recordDuration");
 
-    const recordingResult =
-        document.getElementById("recordingResult");
+const againBtn = document.getElementById("recordAgain");
 
-    const audioPlayer =
-        document.getElementById("audioPreview");
-
-    const indicator =
-        document.getElementById("recordingIndicator");
-
-    const duration =
-        document.getElementById("recordDuration");
-
-    const timer =
-        document.getElementById("recordingTime");
-
-    const generateBtn =
-        document.getElementById("generateBtn");
-
-    const audioUpload =
-        document.getElementById("audioUpload");
-
-    const medicalText =
-        document.getElementById("medicalText");
-
-    const copyJsonBtn =
-        document.getElementById("copyJson");
-
-    const downloadJsonBtn =
-        document.getElementById("downloadJson");
-
-    let recordedBlob = null;
-    let paused = false;
-    let processing = false;
-
-    // -------------------------
-    // Initial UI
-    // -------------------------
+let recordedAudio = null;
+let paused = false;
 
     resetStatus();
     clearTranscript();
     clearFHIR();
-    renderRecordsList();
+        // =============================
+// Start Recording
+// =============================
+
+startBtn.addEventListener("click", async () => {
+
+    await startRecording();
+
+    indicator.innerHTML = "🔴 Recording...";
 
     recordingResult.classList.add("hidden");
 
-    indicator.innerHTML = "⚪ Ready to Record";
+    paused = false;
 
-    timer.textContent = "00:00";
+    pauseBtn.innerHTML =
+        '<i class="fa-solid fa-pause"></i> Pause';
 
-    duration.textContent = "";
+    updateSpeechStatus("Recording");
 
-    audioPlayer.pause();
-    audioPlayer.removeAttribute("src");
-    audioPlayer.load();
-
-    startBtn.disabled = false;
-    pauseBtn.disabled = true;
-    stopBtn.disabled = true;
-
-    function setProcessing(isProcessing) {
-        processing = isProcessing;
-        submitBtn.disabled = isProcessing || !recordedBlob;
-        generateBtn.disabled = isProcessing;
-        audioUpload.disabled = isProcessing;
-    }
-
-    async function renderMedicalJson(medicalJson) {
-        if (!medicalJson) {
-            updateLLMStatus("Failed");
-            updateFHIRStatus("Failed");
-            showToast("Clinical extraction returned empty output", "error");
-            return;
-        }
-
-        updateLLMStatus("Completed");
-        updateFHIRStatus("Generating...");
-
-        const fhirBundle = buildFhirBundle(medicalJson);
-        showFHIR(fhirBundle);
-        updateFHIRStatus("Completed");
-        showToast("FHIR JSON Generated Successfully!");
-
-        await saveRecord(fhirBundle);
-        await renderRecordsList();
-    }
-
-    async function submitAudioSource(audioSource) {
-        try {
-            setProcessing(true);
-            clearTranscript();
-            clearFHIR();
-            updateSpeechStatus("Uploading Audio...");
-            updateLLMStatus("Waiting...");
-            updateFHIRStatus("Waiting...");
-
-            const result = await transcribeAudio(audioSource);
-
-            showTranscript(result.transcript || "No transcript received");
-            updateSpeechStatus("Completed");
-            updateLLMStatus("Extracting...");
-
-            await renderMedicalJson(result.medicalJson);
-        } catch (err) {
-            console.error("Backend Error:", err);
-            updateSpeechStatus("Failed");
-            updateLLMStatus("Failed");
-            updateFHIRStatus("Failed");
-            showToast(err.message || "Backend Connection Failed", "error");
-        } finally {
-            setProcessing(false);
-        }
-    }
-
-    // -------------------------
-    // START
-    // -------------------------
-
-    startBtn.addEventListener("click", async () => {
-        console.log("START RECORDING CLICKED");
-        const started = await startRecording();
-
-        if (!started) return;
-
-        paused = false;
-
-        recordedBlob = null;
-        setProcessing(false);
-
-        recordingResult.classList.add("hidden");
-
-        audioPlayer.pause();
-        audioPlayer.removeAttribute("src");
-        audioPlayer.load();
-
-        duration.textContent = "";
-
-        indicator.innerHTML = "🔴 Recording...";
-
-        timer.textContent = "00:00";
-
-        updateSpeechStatus("Recording...");
-
-        pauseBtn.innerHTML =
-            '<i class="fa-solid fa-pause"></i> Pause';
-
-        startBtn.disabled = true;
-        pauseBtn.disabled = false;
-        stopBtn.disabled = false;
-
-        showToast("Recording Started");
-
-    });
-
-    // -------------------------
-    // PAUSE
-    // -------------------------
-
-    pauseBtn.addEventListener("click", () => {
-
-        if (!paused) {
-
-            pauseRecording();
-
-            paused = true;
-
-            indicator.innerHTML =
-                "⏸ Recording Paused";
-
-            pauseBtn.innerHTML =
-                '<i class="fa-solid fa-play"></i> Resume';
-
-            showToast("Recording Paused");
-
-        } else {
-
-            resumeRecording();
-
-            paused = false;
-
-            indicator.innerHTML =
-                "🔴 Recording...";
-
-            pauseBtn.innerHTML =
-                '<i class="fa-solid fa-pause"></i> Pause';
-
-            showToast("Recording Resumed");
-
-        }
-
-    });
-
-    // -------------------------
-    // STOP
-    // -------------------------
-
-    stopBtn.addEventListener("click", async () => {
-        console.log("STOP RECORDING CLICKED");
-        const result = await stopRecording();
-
-        if (!result) {
-
-            showToast("Recording failed", "error");
-
-            return;
-
-        }
-
-        recordedBlob = result.blob;
-        setProcessing(false);
-
-        audioPlayer.src = result.url;
-
-        audioPlayer.load();
-
-        recordingResult.classList.remove("hidden");
-
-        indicator.innerHTML =
-            "✅ Recording Completed";
-
-        duration.textContent =
-            `(${result.duration} sec)`;
-
-        timer.textContent =
-            `${String(Math.floor(result.duration / 60)).padStart(2, "0")}:${String(result.duration % 60).padStart(2, "0")}`;
-
-        startBtn.disabled = false;
-        pauseBtn.disabled = true;
-        stopBtn.disabled = true;
-
-        updateSpeechStatus("Completed");
-
-        showToast("Recording Saved");
-
-    });
-
-    // -------------------------
-    // RECORD AGAIN
-    // -------------------------
-
-    againBtn.addEventListener("click", () => {
-
-        recordedBlob = null;
-        setProcessing(false);
-
-        audioPlayer.pause();
-
-        audioPlayer.removeAttribute("src");
-
-        audioPlayer.load();
-
-        recordingResult.classList.add("hidden");
-
-        indicator.innerHTML =
-            "⚪ Ready to Record";
-
-        duration.textContent = "";
-
-        timer.textContent = "00:00";
-
-        paused = false;
-
-        pauseBtn.innerHTML =
-            '<i class="fa-solid fa-pause"></i> Pause';
-
-        startBtn.disabled = false;
-        pauseBtn.disabled = true;
-        stopBtn.disabled = true;
-
-        updateSpeechStatus("Waiting...");
-
-        showToast("Ready for new recording");
-
-    });
-
-    // -------------------------
-// SUBMIT AUDIO
-// -------------------------
-
-submitBtn.addEventListener("click", async () => {
-    console.log("SUBMIT AUDIO CLICKED");
-    if (processing) return;
-
-    if (!recordedBlob) {
-        showToast("Please record or upload audio first.", "error");
-        return;
-    }
-
-    await submitAudioSource(recordedBlob);
+    showToast("Recording Started");
 
 });
 
-    audioUpload.addEventListener("change", async () => {
+// =============================
+// Pause / Resume
+// =============================
 
-        const file = audioUpload.files?.[0];
+pauseBtn.addEventListener("click", () => {
 
-        if (!file) return;
+    if (!paused) {
 
-        recordedBlob = file;
-        audioPlayer.src = URL.createObjectURL(file);
-        audioPlayer.load();
-        recordingResult.classList.remove("hidden");
-        indicator.innerHTML = "✅ Audio Uploaded";
-        duration.textContent = "";
-        clearTranscript();
-        clearFHIR();
-        resetStatus();
-        setProcessing(false);
+        pauseRecording();
 
-        showToast("Audio ready. Press Submit Audio to process.");
+        paused = true;
 
-    });
-    // -------------------------
-    // MOCK FHIR
-    // -------------------------
+        indicator.innerHTML = "⏸ Recording Paused";
 
-    generateBtn.addEventListener("click", async () => {
-        if (processing) return;
+        pauseBtn.innerHTML =
+            '<i class="fa-solid fa-play"></i> Resume';
+
+    } else {
+
+        resumeRecording();
+
+        paused = false;
+
+        indicator.innerHTML = "🔴 Recording...";
+
+        pauseBtn.innerHTML =
+            '<i class="fa-solid fa-pause"></i> Pause';
+
+    }
+
+});
+
+// =============================
+// Stop Recording
+// =============================
+
+stopBtn.addEventListener("click", async () => {
+const result = await stopRecording();
+
+if (!result) return;
+
+recordedAudio = result.blob;
+    indicator.innerHTML = "✅ Recording Completed";
+
+    duration.innerText = `(${result.duration} sec)`;
+
+    audioPlayer.src = result.url;
+    const link = document.createElement("a");
+link.href = result.url;
+link.download = "recording";
+link.textContent = "Download Recording";
+document.getElementById("recordingResult").appendChild(link);
+
+    recordingResult.classList.remove("hidden");
+
+    updateSpeechStatus("Completed");
+
+    showToast(`Recording Saved (${result.duration}s)`);
+
+});
+
+// =============================
+// Record Again
+// =============================
+
+againBtn.addEventListener("click", () => {
+
+    audioPlayer.src = "";
+
+    recordingResult.classList.add("hidden");
+
+    document.getElementById("recordingTime").innerText = "00:00";
+
+    indicator.innerHTML = "⚪ Ready to Record";
+
+});
+
+    generateBtn.addEventListener("click", () => {
 
         const input = medicalText.value.trim();
 
         if (!input) {
-
-            showToast("Please enter medical notes.", "error");
-
+            showToast("Please enter medical notes first.", "error");
             return;
-
         }
 
-        try {
-            setProcessing(true);
-            clearFHIR();
-            updateSpeechStatus("Completed");
-            updateLLMStatus("Extracting...");
-            updateFHIRStatus("Generating...");
-            showTranscript(input);
+        updateSpeechStatus("Completed");
+        updateLLMStatus("Processing...");
+        updateFHIRStatus("Generating...");
 
-            const result = await extractMedicalNote(input);
-            await renderMedicalJson(result.medicalJson);
-        } catch (err) {
-            console.error("Backend Error:", err);
-            updateLLMStatus("Failed");
-            updateFHIRStatus("Failed");
-            showToast(err.message || "Backend Connection Failed", "error");
-        } finally {
-            setProcessing(false);
-        }
+        showTranscript(input);
 
-    });
+        const mockFHIR = {
+            resourceType: "Bundle",
+            type: "collection",
+            timestamp: new Date().toISOString(),
+            entry: [
+                {
+                    resource: {
+                        resourceType: "Patient",
+                        gender: "unknown"
+                    }
+                },
+                {
+                    resource: {
+                        resourceType: "Condition",
+                        code: {
+                            text: input
+                        }
+                    }
+                }
+            ]
+        };
 
-    // -------------------------
-    // COPY / DOWNLOAD HANDLERS
-    // -------------------------
-    copyJsonBtn.addEventListener("click", () => {
-        copyJsonToClipboard();
-    });
+        setTimeout(() => {
 
-    downloadJsonBtn.addEventListener("click", () => {
-        downloadJsonFile();
+            updateLLMStatus("Completed");
+            updateFHIRStatus("Completed");
+
+            showFHIR(mockFHIR);
+
+            showToast("FHIR JSON Generated Successfully!");
+
+        }, 1000);
+
     });
 
 });
-
-// -------------------------
-// Service Worker Registration
-// -------------------------
-if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js")
-            .then(reg => console.log("Service Worker registered successfully:", reg.scope))
-            .catch(err => console.error("Service Worker registration failed:", err));
-    });
-}
