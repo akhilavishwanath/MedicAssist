@@ -76,30 +76,64 @@
         <p class="subtitle">
             Record audio or enter medical notes manually.
         </p>
-
         <div class="audio-controls">
-            <button id="startRecording" class="btn success">
-                <i class="fa-solid fa-play"></i>
-                Start Recording
-            </button>
 
-            <button id="stopRecording" class="btn danger">
-                <i class="fa-solid fa-stop"></i>
-                Stop Recording
-            </button>
-        </div>
+    <button id="startRecording" class="btn success">
+        <i class="fa-solid fa-microphone"></i>
+        Start Recording
+    </button>
 
-        <div class="upload-area">
+    <button id="pauseRecording" class="btn warning">
+        <i class="fa-solid fa-pause"></i>
+        Pause
+    </button>
 
-            <label>Upload Audio</label>
+    <button id="stopRecording" class="btn danger">
+        <i class="fa-solid fa-stop"></i>
+        Stop
+    </button>
 
-          <input
-             type="file"
-             id="audioUpload"
-             accept="audio/*,.wav,.mp3,.webm,.m4a">
+</div>
 
-        </div>
+<div class="recording-status">
 
+    <span id="recordingIndicator">
+        ⚪ Ready to Record
+    </span>
+
+    <span id="recordingTime">
+        00:00
+    </span>
+
+</div>
+
+<div id="recordingResult" class="hidden">
+
+    <div class="success-box">
+
+        ✅ Recording Completed
+        <span id="recordDuration"></span>
+
+    </div>
+
+    <audio id="audioPreview" controls></audio>
+
+    <button id="recordAgain" class="btn secondary">
+        🔄 Record Again
+    </button>
+
+</div>
+
+<div class="upload-area">
+
+    <label>Upload Audio</label>
+
+    <input
+        type="file"
+        id="audioUpload"
+        accept="audio/*,.wav,.mp3,.webm,.m4a">
+
+</div>
         <div class="divider">
             <span>OR</span>
         </div>
@@ -133,7 +167,10 @@ Triage Level Red."></textarea>
         </button>
 
     </div>
-
+    <div class="status-item">
+    <span>Recording Duration</span>
+    <span id="recordingTimer">00:00</span>
+</div>
     <div class="card">
 
         <div class="card-header">

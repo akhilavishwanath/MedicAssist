@@ -1,3 +1,7 @@
+import {
+    startRecording,
+    stopRecording
+} from "./components/recorder.js";
 import { showToast } from "./components/utils.js";
 import {
     updateSpeechStatus,
@@ -10,6 +14,12 @@ import {
     showTranscript,
     clearTranscript
 } from "./components/transcript.js";
+import {
+    startRecording,
+    stopRecording,
+    pauseRecording,
+    resumeRecording
+} from "./components/recorder.js";
 
 import {
     showFHIR,
@@ -20,10 +30,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const generateBtn = document.getElementById("generateBtn");
     const medicalText = document.getElementById("medicalText");
-
+    const startBtn = document.getElementById("startRecording");
+    const stopBtn = document.getElementById("stopRecording");
+    let recordedAudio = null;
     resetStatus();
     clearTranscript();
     clearFHIR();
+    startBtn.addEventListener("click", async () => {
+
+    const started = await startRecording();
+
+    if (started) {
+
+        updateSpeechStatus("Recording...");
+
+        showToast("Recording Started");
+
+    }
+
+});
+
+stopBtn.addEventListener("click", async () => {
+    const result = await stopRecording();
+
+recordedAudio = result.blob;
+
+updateSpeechStatus("Recording Completed");
+
+showToast(`Recording Saved (${result.duration} seconds)`);
+
+console.log(result);
+});
 
     generateBtn.addEventListener("click", () => {
 
