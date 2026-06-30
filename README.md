@@ -142,17 +142,27 @@ Tested on: MacBook Pro M2, Dell Latitude i5 (8 GB RAM), Raspberry Pi 5.
 git clone https://gitlab.com/your-team/medic-assist.git
 cd medic-assist
 
-# Download models (one-time, can be done before going into the field)
-./scripts/download_models.sh
+# Backend
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+npm install
+cp .env.example .env
+npm start
 
-# Serve locally (no build step required)
-python3 -m http.server 8080
-# → open http://localhost:8080
+# Frontend, in a second terminal from the repo root
+npm install
+npm start
+# → open http://localhost:8080/src/index.html
 
 # OR install as PWA: open in Chrome → "Install App"
 ```
 
-> **Offline demo:** Open app, disable Wi-Fi/ethernet, record audio → structured JSON output appears with no network activity.
+The frontend calls the local backend at `http://localhost:3001` by default.
+Override it with `?api=http://host:port` or `window.MEDICASSIST_API_BASE_URL`.
+
+> **Offline demo:** Cache/download the required local AI models first, then open the app, disable Wi-Fi/ethernet, record audio → structured JSON output appears with no cloud network activity.
 
 ---
 

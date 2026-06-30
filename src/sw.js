@@ -4,6 +4,7 @@ const ASSETS = [
     "./index.html",
     "./styles.css",
     "./app.js",
+    "./api-client.js",
     "./fhir-builder.js",
     "./db.js",
     "./manifest.json",

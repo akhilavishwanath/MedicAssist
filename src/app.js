@@ -1,7 +1,5 @@
-import "./whisper-runner.js";
-import "./llm-runner.js";
-import "./ai-pipeline.js";
 import { buildFhirBundle } from "./fhir-builder.js";
+import { extractMedicalNote, transcribeAudio } from "./api-client.js";
 
 import {
     startRecording,
@@ -63,6 +61,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const generateBtn =
         document.getElementById("generateBtn");
 
+    const audioUpload =
+        document.getElementById("audioUpload");
+
     const medicalText =
         document.getElementById("medicalText");
 
@@ -74,6 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let recordedBlob = null;
     let paused = false;
+    let processing = false;
 
     // -------------------------
     // Initial UI
@@ -100,12 +102,66 @@ document.addEventListener("DOMContentLoaded", () => {
     pauseBtn.disabled = true;
     stopBtn.disabled = true;
 
+    function setProcessing(isProcessing) {
+        processing = isProcessing;
+        submitBtn.disabled = isProcessing || !recordedBlob;
+        generateBtn.disabled = isProcessing;
+        audioUpload.disabled = isProcessing;
+    }
+
+    async function renderMedicalJson(medicalJson) {
+        if (!medicalJson) {
+            updateLLMStatus("Failed");
+            updateFHIRStatus("Failed");
+            showToast("Clinical extraction returned empty output", "error");
+            return;
+        }
+
+        updateLLMStatus("Completed");
+        updateFHIRStatus("Generating...");
+
+        const fhirBundle = buildFhirBundle(medicalJson);
+        showFHIR(fhirBundle);
+        updateFHIRStatus("Completed");
+        showToast("FHIR JSON Generated Successfully!");
+
+        await saveRecord(fhirBundle);
+        await renderRecordsList();
+    }
+
+    async function submitAudioSource(audioSource) {
+        try {
+            setProcessing(true);
+            clearTranscript();
+            clearFHIR();
+            updateSpeechStatus("Uploading Audio...");
+            updateLLMStatus("Waiting...");
+            updateFHIRStatus("Waiting...");
+
+            const result = await transcribeAudio(audioSource);
+
+            showTranscript(result.transcript || "No transcript received");
+            updateSpeechStatus("Completed");
+            updateLLMStatus("Extracting...");
+
+            await renderMedicalJson(result.medicalJson);
+        } catch (err) {
+            console.error("Backend Error:", err);
+            updateSpeechStatus("Failed");
+            updateLLMStatus("Failed");
+            updateFHIRStatus("Failed");
+            showToast(err.message || "Backend Connection Failed", "error");
+        } finally {
+            setProcessing(false);
+        }
+    }
+
     // -------------------------
     // START
     // -------------------------
 
     startBtn.addEventListener("click", async () => {
-
+        console.log("START RECORDING CLICKED");
         const started = await startRecording();
 
         if (!started) return;
@@ -113,6 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
         paused = false;
 
         recordedBlob = null;
+        setProcessing(false);
 
         recordingResult.classList.add("hidden");
 
@@ -182,7 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // -------------------------
 
     stopBtn.addEventListener("click", async () => {
-
+        console.log("STOP RECORDING CLICKED");
         const result = await stopRecording();
 
         if (!result) {
@@ -194,6 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         recordedBlob = result.blob;
+        setProcessing(false);
 
         audioPlayer.src = result.url;
 
@@ -227,6 +285,7 @@ document.addEventListener("DOMContentLoaded", () => {
     againBtn.addEventListener("click", () => {
 
         recordedBlob = null;
+        setProcessing(false);
 
         audioPlayer.pause();
 
@@ -263,91 +322,44 @@ document.addEventListener("DOMContentLoaded", () => {
 // -------------------------
 
 submitBtn.addEventListener("click", async () => {
+    console.log("SUBMIT AUDIO CLICKED");
+    if (processing) return;
 
     if (!recordedBlob) {
-        showToast("Please record audio first.", "error");
+        showToast("Please record or upload audio first.", "error");
         return;
     }
 
-    try {
-
-        updateSpeechStatus("Uploading Audio...");
-        updateLLMStatus("Waiting...");
-        updateFHIRStatus("Waiting...");
-
-        // Create FormData
-        const formData = new FormData();
-        formData.append("audio", recordedBlob, "recording.webm");
-
-        // Send audio to backend
-        console.log("Sending request...");
-
-const response = await fetch(
-    "http://localhost:3001/api/transcribe",
-    {
-        method: "POST",
-        body: formData
-    }
-);
-
-console.log("Status:", response.status);
-
-const result = await response.json();
-
-console.log("BACKEND RESPONSE:", result);
-
-        if (!response.ok) {
-            showToast(result.message || "Transcription Failed", "error");
-            return;
-        }
-
-        if (!result.success) {
-            showToast(result.message || "Transcription Failed", "error");
-            updateSpeechStatus("Failed");
-            updateLLMStatus("Failed");
-            return;
-        }
-
-        // Show transcript
-        showTranscript(result.transcript || "No transcript received");
-
-        // Update Status
-        updateSpeechStatus("Completed");
-        updateLLMStatus("Extracting...");
-        updateFHIRStatus("Generating...");
-
-        if (result.medicalJson) {
-            const fhirBundle = buildFhirBundle(result.medicalJson);
-            showFHIR(fhirBundle);
-            updateLLMStatus("Completed");
-            updateFHIRStatus("Completed");
-            showToast("FHIR JSON Generated Successfully!");
-            
-            saveRecord(fhirBundle).then(() => {
-                renderRecordsList();
-            });
-        } else {
-            updateLLMStatus("Failed");
-            updateFHIRStatus("Failed");
-            showToast("Clinical extraction failed", "error");
-        }
-
-    } catch (err) {
-
-        console.error("Backend Error:", err);
-        updateSpeechStatus("Failed");
-        updateLLMStatus("Failed");
-        updateFHIRStatus("Failed");
-        showToast("Backend Connection Failed", "error");
-
-    }
+    await submitAudioSource(recordedBlob);
 
 });
+
+    audioUpload.addEventListener("change", async () => {
+
+        const file = audioUpload.files?.[0];
+
+        if (!file) return;
+
+        recordedBlob = file;
+        audioPlayer.src = URL.createObjectURL(file);
+        audioPlayer.load();
+        recordingResult.classList.remove("hidden");
+        indicator.innerHTML = "✅ Audio Uploaded";
+        duration.textContent = "";
+        clearTranscript();
+        clearFHIR();
+        resetStatus();
+        setProcessing(false);
+
+        showToast("Audio ready. Press Submit Audio to process.");
+
+    });
     // -------------------------
     // MOCK FHIR
     // -------------------------
 
     generateBtn.addEventListener("click", async () => {
+        if (processing) return;
 
         const input = medicalText.value.trim();
 
@@ -360,51 +372,22 @@ console.log("BACKEND RESPONSE:", result);
         }
 
         try {
+            setProcessing(true);
+            clearFHIR();
             updateSpeechStatus("Completed");
             updateLLMStatus("Extracting...");
             updateFHIRStatus("Generating...");
             showTranscript(input);
 
-            const response = await fetch(
-                "http://localhost:3001/api/extract",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ notes: input })
-                }
-            );
-
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                showToast(result.message || "Extraction Failed", "error");
-                updateLLMStatus("Failed");
-                updateFHIRStatus("Failed");
-                return;
-            }
-
-            if (result.medicalJson) {
-                const fhirBundle = buildFhirBundle(result.medicalJson);
-                showFHIR(fhirBundle);
-                updateLLMStatus("Completed");
-                updateFHIRStatus("Completed");
-                showToast("FHIR JSON Generated Successfully!");
-                
-                saveRecord(fhirBundle).then(() => {
-                    renderRecordsList();
-                });
-            } else {
-                updateLLMStatus("Failed");
-                updateFHIRStatus("Failed");
-                showToast("Clinical extraction returned empty output", "error");
-            }
+            const result = await extractMedicalNote(input);
+            await renderMedicalJson(result.medicalJson);
         } catch (err) {
             console.error("Backend Error:", err);
             updateLLMStatus("Failed");
             updateFHIRStatus("Failed");
-            showToast("Backend Connection Failed", "error");
+            showToast(err.message || "Backend Connection Failed", "error");
+        } finally {
+            setProcessing(false);
         }
 
     });

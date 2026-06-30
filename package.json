@@ -4,6 +4,7 @@
   "description": "Tactical Field Medic Assistant",
   "type": "module",
   "scripts": {
+    "start": "python3 -m http.server 8080",
     "test": "node --test src/*.test.js"
   },
   "author": "",
