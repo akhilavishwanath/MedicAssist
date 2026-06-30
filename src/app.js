@@ -14,6 +14,12 @@ import {
     showTranscript,
     clearTranscript
 } from "./components/transcript.js";
+import {
+    startRecording,
+    stopRecording,
+    pauseRecording,
+    resumeRecording
+} from "./components/recorder.js";
 
 import {
     showFHIR,

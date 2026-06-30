@@ -75,7 +75,6 @@ export function stopRecording() {
             });
 
         };
-
         mediaRecorder.stop();
 
     });
