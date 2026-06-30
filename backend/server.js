@@ -4,11 +4,15 @@ import dotenv from "dotenv";
 import multer from "multer";
 import fs from "fs";
 import path from "path";
-import { exec } from "child_process";
+import { execFile } from "child_process";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
 const app = express();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const pythonPath = path.join(__dirname, "venv", "bin", "python");
 
 app.use(cors());
 app.use(express.json());
@@ -62,10 +66,7 @@ app.post("/api/transcribe", upload.single("audio"), (req, res) => {
     console.log("\n========== AUDIO RECEIVED ==========");
     console.log(req.file.path);
 
-    const whisperCmd =
-        `/Users/akhilavishwanath/Desktop/field-medic-assistant/backend/venv/bin/python transcribe.py "${req.file.path}"`;
-
-    exec(whisperCmd, { cwd: process.cwd() }, (err, stdout, stderr) => {
+    execFile(pythonPath, ["transcribe.py", req.file.path], { cwd: __dirname }, (err, stdout, stderr) => {
 
         if (err) {
 
@@ -83,10 +84,7 @@ app.post("/api/transcribe", upload.single("audio"), (req, res) => {
         console.log("\n========== TRANSCRIPT ==========");
         console.log(transcript);
 
-        const llmCmd =
-            `/Users/akhilavishwanath/Desktop/field-medic-assistant/backend/venv/bin/python llm.py "${transcript.replace(/"/g, '\\"')}"`;
-
-        exec(llmCmd, { cwd: process.cwd() }, (llmErr, llmOut, llmStdErr) => {
+        execFile(pythonPath, ["llm.py", transcript], { cwd: __dirname }, (llmErr, llmOut, llmStdErr) => {
 
             if (llmErr) {
 
@@ -126,6 +124,62 @@ app.post("/api/transcribe", upload.single("audio"), (req, res) => {
 
             });
 
+        });
+
+    });
+
+});
+
+// ----------------------
+// Clinical Extraction Route (for manual text notes)
+// ----------------------
+app.post("/api/extract", (req, res) => {
+
+    const { notes } = req.body;
+
+    if (!notes) {
+        return res.status(400).json({
+            success: false,
+            message: "No notes provided"
+        });
+    }
+
+    console.log("\n========== MANUAL NOTES RECEIVED ==========");
+    console.log(notes);
+
+    execFile(pythonPath, ["llm.py", notes], { cwd: __dirname }, (llmErr, llmOut, llmStdErr) => {
+
+        if (llmErr) {
+
+            console.error(llmErr);
+
+            return res.status(500).json({
+                success: false,
+                message: llmErr.message
+            });
+
+        }
+
+        console.log("\n========== MEDICAL JSON ==========");
+        console.log(llmOut);
+
+        let medicalJson;
+
+        try {
+
+            medicalJson = JSON.parse(llmOut);
+
+        } catch {
+
+            medicalJson = {
+                rawNote: notes
+            };
+
+        }
+
+        res.json({
+            success: true,
+            medicalJson
         });
 
     });

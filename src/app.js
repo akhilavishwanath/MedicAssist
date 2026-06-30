@@ -11,6 +11,9 @@ import {
 } from "./components/recorder.js";
 
 import { showToast } from "./components/utils.js";
+import { copyJsonToClipboard, downloadJsonFile } from "./components/exportUtils.js";
+import { saveRecord } from "./db.js";
+import { renderRecordsList } from "./components/records.js";
 
 import {
     updateSpeechStatus,
@@ -63,6 +66,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const medicalText =
         document.getElementById("medicalText");
 
+    const copyJsonBtn =
+        document.getElementById("copyJson");
+
+    const downloadJsonBtn =
+        document.getElementById("downloadJson");
+
     let recordedBlob = null;
     let paused = false;
 
@@ -73,6 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     resetStatus();
     clearTranscript();
     clearFHIR();
+    renderRecordsList();
 
     recordingResult.classList.add("hidden");
 
@@ -293,6 +303,8 @@ console.log("BACKEND RESPONSE:", result);
 
         if (!result.success) {
             showToast(result.message || "Transcription Failed", "error");
+            updateSpeechStatus("Failed");
+            updateLLMStatus("Failed");
             return;
         }
 
@@ -301,15 +313,31 @@ console.log("BACKEND RESPONSE:", result);
 
         // Update Status
         updateSpeechStatus("Completed");
-        updateLLMStatus("Completed");
-        updateFHIRStatus("Waiting...");
+        updateLLMStatus("Extracting...");
+        updateFHIRStatus("Generating...");
 
-        showToast("Speech Recognition Completed!");
+        if (result.medicalJson) {
+            const fhirBundle = buildFhirBundle(result.medicalJson);
+            showFHIR(fhirBundle);
+            updateLLMStatus("Completed");
+            updateFHIRStatus("Completed");
+            showToast("FHIR JSON Generated Successfully!");
+            
+            saveRecord(fhirBundle).then(() => {
+                renderRecordsList();
+            });
+        } else {
+            updateLLMStatus("Failed");
+            updateFHIRStatus("Failed");
+            showToast("Clinical extraction failed", "error");
+        }
 
     } catch (err) {
 
         console.error("Backend Error:", err);
-
+        updateSpeechStatus("Failed");
+        updateLLMStatus("Failed");
+        updateFHIRStatus("Failed");
         showToast("Backend Connection Failed", "error");
 
     }
@@ -319,7 +347,7 @@ console.log("BACKEND RESPONSE:", result);
     // MOCK FHIR
     // -------------------------
 
-    generateBtn.addEventListener("click", () => {
+    generateBtn.addEventListener("click", async () => {
 
         const input = medicalText.value.trim();
 
@@ -331,56 +359,76 @@ console.log("BACKEND RESPONSE:", result);
 
         }
 
-        updateSpeechStatus("Completed");
+        try {
+            updateSpeechStatus("Completed");
+            updateLLMStatus("Extracting...");
+            updateFHIRStatus("Generating...");
+            showTranscript(input);
 
-        updateLLMStatus("Processing...");
-
-        updateFHIRStatus("Generating...");
-
-        showTranscript(input);
-
-        const mockFHIR = {
-
-            resourceType: "Bundle",
-
-            type: "collection",
-
-            timestamp: new Date().toISOString(),
-
-            entry: [
-
+            const response = await fetch(
+                "http://localhost:3001/api/extract",
                 {
-                    resource: {
-                        resourceType: "Patient",
-                        gender: "unknown"
-                    }
-                },
-
-                {
-                    resource: {
-                        resourceType: "Condition",
-                        code: {
-                            text: input
-                        }
-                    }
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ notes: input })
                 }
+            );
 
-            ]
+            const result = await response.json();
 
-        };
+            if (!response.ok || !result.success) {
+                showToast(result.message || "Extraction Failed", "error");
+                updateLLMStatus("Failed");
+                updateFHIRStatus("Failed");
+                return;
+            }
 
-        setTimeout(() => {
-
-            updateLLMStatus("Completed");
-
-            updateFHIRStatus("Completed");
-
-            showFHIR(mockFHIR);
-
-            showToast("FHIR JSON Generated Successfully!");
-
-        }, 1000);
+            if (result.medicalJson) {
+                const fhirBundle = buildFhirBundle(result.medicalJson);
+                showFHIR(fhirBundle);
+                updateLLMStatus("Completed");
+                updateFHIRStatus("Completed");
+                showToast("FHIR JSON Generated Successfully!");
+                
+                saveRecord(fhirBundle).then(() => {
+                    renderRecordsList();
+                });
+            } else {
+                updateLLMStatus("Failed");
+                updateFHIRStatus("Failed");
+                showToast("Clinical extraction returned empty output", "error");
+            }
+        } catch (err) {
+            console.error("Backend Error:", err);
+            updateLLMStatus("Failed");
+            updateFHIRStatus("Failed");
+            showToast("Backend Connection Failed", "error");
+        }
 
     });
 
+    // -------------------------
+    // COPY / DOWNLOAD HANDLERS
+    // -------------------------
+    copyJsonBtn.addEventListener("click", () => {
+        copyJsonToClipboard();
+    });
+
+    downloadJsonBtn.addEventListener("click", () => {
+        downloadJsonFile();
+    });
+
 });
+
+// -------------------------
+// Service Worker Registration
+// -------------------------
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js")
+            .then(reg => console.log("Service Worker registered successfully:", reg.scope))
+            .catch(err => console.error("Service Worker registration failed:", err));
+    });
+}
