@@ -1,72 +1,40 @@
+import os
 import sys
 import json
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from dotenv import load_dotenv
+from huggingface_hub import InferenceClient
 
-MODEL_NAME = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+load_dotenv()
 
-print("Loading TinyLlama...", file=sys.stderr)
-
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_NAME,
-    device_map="auto",
-    torch_dtype=torch.float32
+client = InferenceClient(
+    provider="hf-inference",
+    api_key=os.getenv("HF_TOKEN"),
 )
 
-print("TinyLlama Ready!", file=sys.stderr)
-
 if len(sys.argv) < 2:
-    print(json.dumps({"error": "No transcript provided"}))
+    print(json.dumps({"error": "No transcript"}))
     sys.exit(1)
 
 transcript = sys.argv[1]
 
 prompt = f"""
-You are an AI medical assistant.
-
-Extract information from the following medical transcript.
+Extract the medical information from this transcript.
 
 Return ONLY valid JSON.
 
-Schema:
-
-{{
-    "patient": {{
-        "estimatedAge": null,
-        "gender": "unknown"
-    }},
-    "encounter": {{
-        "triageLevel": "yellow"
-    }},
-    "conditions": [],
-    "vitals": [],
-    "procedures": [],
-    "rawNote": ""
-}}
-
-Medical Transcript:
+Transcript:
 {transcript}
-
-JSON:
 """
 
-inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-
-outputs = model.generate(
-    **inputs,
-    max_new_tokens=256,
-    temperature=0.1,
-    do_sample=False,
-    pad_token_id=tokenizer.eos_token_id
+response = client.chat.completions.create(
+    model="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+    messages=[
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ],
+    max_tokens=300,
 )
 
-response = tokenizer.decode(
-    outputs[0],
-    skip_special_tokens=True
-)
-
-response = response.replace(prompt, "").strip()
-
-print(response)
+print(response.choices[0].message.content)
