@@ -1,3 +1,8 @@
+import "./whisper-runner.js";
+import "./llm-runner.js";
+import "./ai-pipeline.js";
+import { buildFhirBundle } from "./fhir-builder.js";
+
 import {
     startRecording,
     stopRecording,
@@ -244,28 +249,72 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // -------------------------
-    // SUBMIT
-    // -------------------------
+// SUBMIT AUDIO
+// -------------------------
 
-    submitBtn.addEventListener("click", () => {
+submitBtn.addEventListener("click", async () => {
 
-        if (!recordedBlob) {
+    if (!recordedBlob) {
+        showToast("Please record audio first.", "error");
+        return;
+    }
 
-            showToast("Please record audio first.", "error");
+    try {
 
+        updateSpeechStatus("Uploading Audio...");
+        updateLLMStatus("Waiting...");
+        updateFHIRStatus("Waiting...");
+
+        // Create FormData
+        const formData = new FormData();
+        formData.append("audio", recordedBlob, "recording.webm");
+
+        // Send audio to backend
+        console.log("Sending request...");
+
+const response = await fetch(
+    "http://localhost:3001/api/transcribe",
+    {
+        method: "POST",
+        body: formData
+    }
+);
+
+console.log("Status:", response.status);
+
+const result = await response.json();
+
+console.log("BACKEND RESPONSE:", result);
+
+        if (!response.ok) {
+            showToast(result.message || "Transcription Failed", "error");
             return;
-
         }
 
-        updateSpeechStatus("Audio Submitted");
+        if (!result.success) {
+            showToast(result.message || "Transcription Failed", "error");
+            return;
+        }
 
-        showToast("Audio submitted successfully!");
+        // Show transcript
+        showTranscript(result.transcript || "No transcript received");
 
-        // TODO:
-        // Send recordedBlob to backend
+        // Update Status
+        updateSpeechStatus("Completed");
+        updateLLMStatus("Completed");
+        updateFHIRStatus("Waiting...");
 
-    });
+        showToast("Speech Recognition Completed!");
 
+    } catch (err) {
+
+        console.error("Backend Error:", err);
+
+        showToast("Backend Connection Failed", "error");
+
+    }
+
+});
     // -------------------------
     // MOCK FHIR
     // -------------------------
