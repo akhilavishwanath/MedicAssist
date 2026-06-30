@@ -1,40 +1,29 @@
-import os
 import sys
 import json
-from dotenv import load_dotenv
-from huggingface_hub import InferenceClient
+import warnings
+import os
 
-load_dotenv()
+# Suppress warnings to avoid corrupting stdout JSON parsing
+warnings.filterwarnings("ignore")
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-client = InferenceClient(
-    provider="hf-inference",
-    api_key=os.getenv("HF_TOKEN"),
-)
+from utils.extract import extract_clinical_info
+from utils.parser import parse_and_normalize_json
 
-if len(sys.argv) < 2:
-    print(json.dumps({"error": "No transcript"}))
-    sys.exit(1)
+def main():
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "No transcript"}))
+        sys.exit(1)
+        
+    transcript = sys.argv[1]
+    
+    try:
+        raw_output = extract_clinical_info(transcript)
+        result = parse_and_normalize_json(raw_output, transcript)
+        print(json.dumps(result))
+    except Exception as e:
+        print(json.dumps({"error": str(e), "rawNote": transcript}))
+        sys.exit(1)
 
-transcript = sys.argv[1]
-
-prompt = f"""
-Extract the medical information from this transcript.
-
-Return ONLY valid JSON.
-
-Transcript:
-{transcript}
-"""
-
-response = client.chat.completions.create(
-    model="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-    messages=[
-        {
-            "role": "user",
-            "content": prompt
-        }
-    ],
-    max_tokens=300,
-)
-
-print(response.choices[0].message.content)
+if __name__ == "__main__":
+    main()
