@@ -1,0 +1,11 @@
+{
+  "name": "medic-assist",
+  "version": "0.1.0",
+  "description": "Tactical Field Medic Assistant",
+  "type": "module",
+  "scripts": {
+    "test": "node --test src/*.test.js"
+  },
+  "author": "",
+  "license": "GPL-3.0"
+}
