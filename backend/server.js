@@ -26,9 +26,16 @@ const allowedOrigins = (
 .filter(Boolean);
 app.use(cors({
     origin(origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-            return;
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        if (
+            origin === "http://localhost:8080" ||
+            origin === "http://127.0.0.1:8080" ||
+            origin.endsWith(".vercel.app")
+        ) {
+            return callback(null, true);
         }
 
         callback(new Error(`CORS blocked origin: ${origin}`));
