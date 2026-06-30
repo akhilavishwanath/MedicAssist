@@ -17,11 +17,13 @@ const defaultPythonPath = path.join(__dirname, "venv", "bin", "python");
 const pythonPath = process.env.PYTHON_BIN || defaultPythonPath;
 const speechTimeoutMs = Number(process.env.SPEECH_TIMEOUT_MS || 300000);
 const extractionTimeoutMs = Number(process.env.EXTRACTION_TIMEOUT_MS || 60000);
-const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:8080,http://127.0.0.1:8080")
-    .split(",")
-    .map(origin => origin.trim())
-    .filter(Boolean);
-
+const allowedOrigins = (
+    process.env.CORS_ORIGIN ||
+    "http://localhost:8080,http://127.0.0.1:8080,https://medic-assist-oqco6urvp-akhila-vishwanath-s-projects.vercel.app"
+)
+.split(",")
+.map(origin => origin.trim())
+.filter(Boolean);
 app.use(cors({
     origin(origin, callback) {
         if (!origin || allowedOrigins.includes(origin)) {
@@ -265,7 +267,7 @@ app.post("/api/extract", async (req, res) => {
 // Start Server
 // ----------------------
 const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || "127.0.0.1";
+const HOST = process.env.HOST || "0.0.0.0";
 
 const server = app.listen(PORT, HOST, () => {
     console.log(`Server running on http://${HOST}:${PORT}`);

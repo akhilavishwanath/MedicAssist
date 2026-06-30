@@ -1,4 +1,7 @@
-const DEFAULT_API_BASE_URL = "http://localhost:3001";
+const DEFAULT_API_BASE_URL =
+    window.location.hostname === "localhost"
+        ? "http://localhost:3001"
+        : "https://medicassist.onrender.com";
 
 export const API_BASE_URL = (
     window.MEDICASSIST_API_BASE_URL ||
