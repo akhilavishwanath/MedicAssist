@@ -1,21 +1,25 @@
-let mediaRecorder;
+let mediaRecorder = null;
 let audioChunks = [];
+let stream = null;
 
 let timer = null;
 let seconds = 0;
+
+// --------------------------
+// Start Recording
+// --------------------------
 
 export async function startRecording() {
 
     try {
 
-        const stream = await navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
             audio: true
         });
 
         mediaRecorder = new MediaRecorder(stream);
 
         audioChunks = [];
-
         seconds = 0;
 
         updateTimer();
@@ -29,23 +33,76 @@ export async function startRecording() {
         }, 1000);
 
         mediaRecorder.ondataavailable = (event) => {
-            audioChunks.push(event.data);
+
+            if (event.data.size > 0) {
+
+                audioChunks.push(event.data);
+
+            }
+
         };
 
         mediaRecorder.start();
 
         return true;
 
-    } catch (error) {
+    } catch (err) {
 
-        console.error(error);
+        console.error(err);
 
-        alert("Microphone permission denied.");
+        alert("Unable to access microphone.");
 
         return false;
+
     }
 
 }
+
+// --------------------------
+// Pause
+// --------------------------
+
+export function pauseRecording() {
+
+    if (!mediaRecorder) return;
+
+    if (mediaRecorder.state === "recording") {
+
+        mediaRecorder.pause();
+
+        clearInterval(timer);
+
+    }
+
+}
+
+// --------------------------
+// Resume
+// --------------------------
+
+export function resumeRecording() {
+
+    if (!mediaRecorder) return;
+
+    if (mediaRecorder.state === "paused") {
+
+        mediaRecorder.resume();
+
+        timer = setInterval(() => {
+
+            seconds++;
+
+            updateTimer();
+
+        }, 1000);
+
+    }
+
+}
+
+// --------------------------
+// Stop
+// --------------------------
 
 export function stopRecording() {
 
@@ -63,31 +120,50 @@ export function stopRecording() {
 
         mediaRecorder.onstop = () => {
 
-            const audioBlob = new Blob(audioChunks, {
-
-                type: "audio/webm"
-
+            const blob = new Blob(audioChunks, {
+                type: mediaRecorder.mimeType
             });
 
+            const url = URL.createObjectURL(blob);
+
+            if (stream) {
+
+                stream.getTracks().forEach(track => track.stop());
+
+            }
+
             resolve({
-                blob: audioBlob,
+
+                blob,
+                url,
                 duration: seconds
+
             });
 
         };
+
         mediaRecorder.stop();
 
     });
 
 }
 
+// --------------------------
+// Timer
+// --------------------------
+
 function updateTimer() {
 
-    const minutes = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
 
     const secs = String(seconds % 60).padStart(2, "0");
 
-    document.getElementById("recordingTimer").textContent =
-        `${minutes}:${secs}`;
+    const timerElement = document.getElementById("recordingTimer");
+
+    if (timerElement) {
+
+        timerElement.textContent = `${mins}:${secs}`;
+
+    }
 
 }
