@@ -33,96 +33,99 @@ document.addEventListener("DOMContentLoaded", () => {
     const startBtn = document.getElementById("startRecording");
     const stopBtn = document.getElementById("stopRecording");
     const pauseBtn = document.getElementById("pauseRecording");
+
     const againBtn = document.getElementById("recordAgain");
     const submitBtn = document.getElementById("submitAudio");
-    const audioPlayer = document.getElementById("audioPreview");
-    const recordingResult = document.getElementById("recordingResult");
-    // Hide recording section on page load
-    recordingResult.style.display = "none";
-    const indicator = document.getElementById("recordingIndicator");
-    const duration = document.getElementById("recordDuration");
 
-    const generateBtn = document.getElementById("generateBtn");
-    const medicalText = document.getElementById("medicalText");
-    // Hide recording controls initially
-    audioPlayer.style.display = "none";
-    submitBtn.style.display = "none";
-    againBtn.style.display = "none";
+    const recordingResult =
+        document.getElementById("recordingResult");
 
-    let paused = false;
+    const audioPlayer =
+        document.getElementById("audioPreview");
+
+    const indicator =
+        document.getElementById("recordingIndicator");
+
+    const duration =
+        document.getElementById("recordDuration");
+
+    const timer =
+        document.getElementById("recordingTime");
+
+    const generateBtn =
+        document.getElementById("generateBtn");
+
+    const medicalText =
+        document.getElementById("medicalText");
+
     let recordedBlob = null;
+    let paused = false;
+
     // -------------------------
-    // Initial State
+    // Initial UI
     // -------------------------
 
     resetStatus();
     clearTranscript();
     clearFHIR();
 
-    // Reset UI
     recordingResult.classList.add("hidden");
-
-    audioPlayer.pause();
-    audioPlayer.removeAttribute("src");
-    audioPlayer.load();
 
     indicator.innerHTML = "⚪ Ready to Record";
 
+    timer.textContent = "00:00";
+
     duration.textContent = "";
-
-    document.getElementById("recordingTime").textContent = "00:00";
-
-    recordedBlob = null;
-    paused = false;
-
-    pauseBtn.innerHTML =
-    '<i class="fa-solid fa-pause"></i> Pause';
-
-    // Button states
-    startBtn.disabled = false;
-    pauseBtn.disabled = true;
-    stopBtn.disabled = true;
-    // -------------------------
-    // Start Recording
-    // -------------------------
-        startBtn.addEventListener("click", async () => {
-
-    const started = await startRecording();
-
-    if (!started) return;
-
-    paused = false;
-
-    // Reset previous recording
-    recordingResult.style.display = "none";
 
     audioPlayer.pause();
     audioPlayer.removeAttribute("src");
     audioPlayer.load();
 
-    recordedBlob = null;
-
-    duration.textContent = "";
-
-    indicator.innerHTML = "🔴 Recording...";
-
-    document.getElementById("recordingTime").textContent = "00:00";
-
-    updateSpeechStatus("Recording...");
-
-    pauseBtn.innerHTML =
-    '<i class="fa-solid fa-pause"></i> Pause';
-
-    startBtn.disabled = true;
-    pauseBtn.disabled = false;
-    stopBtn.disabled = false;
-
-    showToast("Recording Started");
-
-});
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    stopBtn.disabled = true;
 
     // -------------------------
-    // Pause / Resume
+    // START
+    // -------------------------
+
+    startBtn.addEventListener("click", async () => {
+
+        const started = await startRecording();
+
+        if (!started) return;
+
+        paused = false;
+
+        recordedBlob = null;
+
+        recordingResult.classList.add("hidden");
+
+        audioPlayer.pause();
+        audioPlayer.removeAttribute("src");
+        audioPlayer.load();
+
+        duration.textContent = "";
+
+        indicator.innerHTML = "🔴 Recording...";
+
+        timer.textContent = "00:00";
+
+        updateSpeechStatus("Recording...");
+
+        pauseBtn.innerHTML =
+            '<i class="fa-solid fa-pause"></i> Pause';
+
+        startBtn.disabled = true;
+        pauseBtn.disabled = false;
+        stopBtn.disabled = false;
+
+        showToast("Recording Started");
+
+    });
+
+    // -------------------------
+    // PAUSE
     // -------------------------
 
     pauseBtn.addEventListener("click", () => {
@@ -133,7 +136,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             paused = true;
 
-            indicator.innerHTML = "⏸ Recording Paused";
+            indicator.innerHTML =
+                "⏸ Recording Paused";
 
             pauseBtn.innerHTML =
                 '<i class="fa-solid fa-play"></i> Resume';
@@ -146,7 +150,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             paused = false;
 
-            indicator.innerHTML = "🔴 Recording...";
+            indicator.innerHTML =
+                "🔴 Recording...";
 
             pauseBtn.innerHTML =
                 '<i class="fa-solid fa-pause"></i> Pause';
@@ -158,124 +163,111 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // -------------------------
-// Stop Recording
-// -------------------------
+    // STOP
+    // -------------------------
 
-stopBtn.addEventListener("click", async () => {
+    stopBtn.addEventListener("click", async () => {
 
-    const result = await stopRecording();
+        const result = await stopRecording();
 
-    if (!result) {
+        if (!result) {
 
-        showToast("Recording failed!", "error");
+            showToast("Recording failed", "error");
 
-        return;
+            return;
 
-    }
+        }
 
-    console.log("Result:", result);
-    console.log("Blob:", result.blob);
-    console.log("URL:", result.url);
+        recordedBlob = result.blob;
 
-    recordedBlob = result.blob;
+        audioPlayer.src = result.url;
 
-    // Set audio source
-    audioPlayer.src = result.url;
+        audioPlayer.load();
 
-    audioPlayer.load();
+        recordingResult.classList.remove("hidden");
 
-    // Show recording section
-    recordingResult.classList.remove("hidden");
+        indicator.innerHTML =
+            "✅ Recording Completed";
 
-    // Show controls
-    audioPlayer.style.display = "block";
-    submitBtn.style.display = "inline-flex";
-    againBtn.style.display = "inline-flex";
+        duration.textContent =
+            `(${result.duration} sec)`;
 
-    // Update UI
-    indicator.innerHTML = "✅ Recording Completed";
+        timer.textContent =
+            `${String(Math.floor(result.duration / 60)).padStart(2, "0")}:${String(result.duration % 60).padStart(2, "0")}`;
 
-    duration.textContent = `(${result.duration} sec)`;
+        startBtn.disabled = false;
+        pauseBtn.disabled = true;
+        stopBtn.disabled = true;
 
-    document.getElementById("recordingTime").textContent =
-        `${String(Math.floor(result.duration / 60)).padStart(2, "0")}:${String(result.duration % 60).padStart(2, "0")}`;
+        updateSpeechStatus("Completed");
 
-    startBtn.disabled = false;
-    pauseBtn.disabled = true;
-    stopBtn.disabled = true;
+        showToast("Recording Saved");
 
-    updateSpeechStatus("Completed");
-
-    showToast(`Recording Saved (${result.duration}s)`);
-
-});
+    });
 
     // -------------------------
-    // Record Again
+    // RECORD AGAIN
     // -------------------------
-        againBtn.addEventListener("click", () => {
 
-    // Hide completed recording section
-    recordingResult.classList.add("hidden");
+    againBtn.addEventListener("click", () => {
 
-    // Stop audio if playing
-    audioPlayer.pause();
+        recordedBlob = null;
 
-    // Clear previous recording
-    audioPlayer.removeAttribute("src");
-    audioPlayer.load();
+        audioPlayer.pause();
 
-    // Hide audio controls
-    audioPlayer.style.display = "none";
-    submitBtn.style.display = "none";
-    againBtn.style.display = "none";
+        audioPlayer.removeAttribute("src");
 
-    recordedBlob = null;
+        audioPlayer.load();
 
-    indicator.innerHTML = "⚪ Ready to Record";
+        recordingResult.classList.add("hidden");
 
-    duration.textContent = "";
+        indicator.innerHTML =
+            "⚪ Ready to Record";
 
-    document.getElementById("recordingTime").textContent = "00:00";
+        duration.textContent = "";
 
-    pauseBtn.innerHTML =
-        '<i class="fa-solid fa-pause"></i> Pause';
+        timer.textContent = "00:00";
 
-    paused = false;
+        paused = false;
 
-    startBtn.disabled = false;
-    pauseBtn.disabled = true;
-    stopBtn.disabled = true;
+        pauseBtn.innerHTML =
+            '<i class="fa-solid fa-pause"></i> Pause';
 
-    showToast("Ready for new recording");
+        startBtn.disabled = false;
+        pauseBtn.disabled = true;
+        stopBtn.disabled = true;
 
-});
-   
+        updateSpeechStatus("Waiting...");
+
+        showToast("Ready for new recording");
+
+    });
 
     // -------------------------
-// Submit Audio
-// -------------------------
-
-submitBtn.addEventListener("click", () => {
-
-    if (!recordedBlob) {
-
-        showToast("Please record audio first.", "error");
-
-        return;
-
-    }
-
-    updateSpeechStatus("Audio Submitted");
-
-    showToast("Audio submitted successfully! Waiting for transcription...");
-
-    // TODO:
-    // Send recordedBlob to Whisper.cpp backend here
-
-});
+    // SUBMIT
     // -------------------------
-    // Generate Mock FHIR
+
+    submitBtn.addEventListener("click", () => {
+
+        if (!recordedBlob) {
+
+            showToast("Please record audio first.", "error");
+
+            return;
+
+        }
+
+        updateSpeechStatus("Audio Submitted");
+
+        showToast("Audio submitted successfully!");
+
+        // TODO:
+        // Send recordedBlob to backend
+
+    });
+
+    // -------------------------
+    // MOCK FHIR
     // -------------------------
 
     generateBtn.addEventListener("click", () => {
@@ -284,7 +276,7 @@ submitBtn.addEventListener("click", () => {
 
         if (!input) {
 
-            showToast("Please enter medical notes first.", "error");
+            showToast("Please enter medical notes.", "error");
 
             return;
 
@@ -309,31 +301,19 @@ submitBtn.addEventListener("click", () => {
             entry: [
 
                 {
-
                     resource: {
-
                         resourceType: "Patient",
-
                         gender: "unknown"
-
                     }
-
                 },
 
                 {
-
                     resource: {
-
                         resourceType: "Condition",
-
                         code: {
-
                             text: input
-
                         }
-
                     }
-
                 }
 
             ]
