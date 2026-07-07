@@ -13,7 +13,7 @@ const app = express();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, "uploads");
-const defaultPythonPath = path.join(__dirname, "venv", "bin", "python");
+const defaultPythonPath = process.env.PYTHON_BIN || "python3";
 const pythonPath = process.env.PYTHON_BIN || defaultPythonPath;
 const speechTimeoutMs = Number(process.env.SPEECH_TIMEOUT_MS || 300000);
 const extractionTimeoutMs = Number(process.env.EXTRACTION_TIMEOUT_MS || 60000);
