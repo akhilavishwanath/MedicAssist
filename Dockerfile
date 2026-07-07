@@ -1,9 +1,27 @@
-FROM python:3.13-slim
+# ---------- Base Image ----------
+FROM node:24-bookworm
+
+# ---------- Install Python ----------
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip python3-venv && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# ---------- Copy Project ----------
 COPY . .
 
-EXPOSE 8080
+# ---------- Install Backend Node Packages ----------
+WORKDIR /app/backend
+RUN npm install
 
-CMD ["python", "-m", "http.server", "8080"]
+# ---------- Install Python Packages ----------
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# ---------- Expose Backend ----------
+EXPOSE 3001
+
+ENV PORT=3001
+
+# ---------- Start Backend ----------
+CMD ["npm","start"]
