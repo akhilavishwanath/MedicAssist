@@ -21,8 +21,8 @@ import {
     showFHIR,
     clearFHIR
 } from "./components/fhirViewer.js";
-import { extractMedicalNote } from "./api-client.js";
-import { buildFhirBundle } from "./fhir-builder.js";
+import { extractMedicalNote } from "./api-client.js?v=3";
+import { buildFhirBundle } from "./fhir-builder.js?v=3";
 
 document.addEventListener("DOMContentLoaded", () => {
 
