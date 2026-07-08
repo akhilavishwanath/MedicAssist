@@ -21,6 +21,8 @@ import {
     showFHIR,
     clearFHIR
 } from "./components/fhirViewer.js";
+import { extractMedicalNote } from "./api-client.js";
+import { buildFhirBundle } from "./fhir-builder.js";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -145,7 +147,7 @@ againBtn.addEventListener("click", () => {
 
 });
 
-    generateBtn.addEventListener("click", () => {
+    generateBtn.addEventListener("click", async () => {
 
         const input = medicalText.value.trim();
 
@@ -160,38 +162,24 @@ againBtn.addEventListener("click", () => {
 
         showTranscript(input);
 
-        const mockFHIR = {
-            resourceType: "Bundle",
-            type: "collection",
-            timestamp: new Date().toISOString(),
-            entry: [
-                {
-                    resource: {
-                        resourceType: "Patient",
-                        gender: "unknown"
-                    }
-                },
-                {
-                    resource: {
-                        resourceType: "Condition",
-                        code: {
-                            text: input
-                        }
-                    }
-                }
-            ]
-        };
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
 
-        setTimeout(() => {
-
+        try {
+            const result = await extractMedicalNote(input);
+            const bundle = buildFhirBundle(result.medicalJson);
             updateLLMStatus("Completed");
             updateFHIRStatus("Completed");
-
-            showFHIR(mockFHIR);
-
+            showFHIR(bundle);
             showToast("FHIR JSON Generated Successfully!");
-
-        }, 1000);
+        } catch (error) {
+            updateLLMStatus("Failed");
+            updateFHIRStatus("Failed");
+            showToast(error.message || "Unable to process the medical note.", "error");
+        } finally {
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Medical Note';
+        }
 
     });
 

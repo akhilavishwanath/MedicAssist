@@ -77,6 +77,11 @@
 
 }
 
+#generateBtn {
+  width: 100%;
+  min-height: 48px;
+}
+
 .success {
 
   background: var(--success);
