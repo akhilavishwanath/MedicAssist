@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: medicassist-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_BIN
+        value: python3
+      - key: CORS_ORIGIN
+        value: http://localhost:8080,http://127.0.0.1:8080

@@ -26,15 +26,7 @@ const allowedOrigins = (
 .filter(Boolean);
 app.use(cors({
     origin(origin, callback) {
-        if (!origin) {
-            return callback(null, true);
-        }
-
-        if (
-            origin === "http://localhost:8080" ||
-            origin === "http://127.0.0.1:8080" ||
-            origin.endsWith(".vercel.app")
-        ) {
+        if (!origin || allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
 
