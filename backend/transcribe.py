@@ -1,11 +1,13 @@
 from faster_whisper import WhisperModel
 import sys
+import os
 
 # Load Whisper model
 model = WhisperModel(
-    "base",
+    os.getenv("WHISPER_MODEL_SIZE", "tiny.en"),
     device="cpu",
-    compute_type="int8"
+    compute_type="int8",
+    cpu_threads=2,
 )
 
 # Check if audio file path is provided

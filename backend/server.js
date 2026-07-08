@@ -17,6 +17,7 @@ const defaultPythonPath = process.env.PYTHON_BIN || "python3";
 const pythonPath = process.env.PYTHON_BIN || defaultPythonPath;
 const speechTimeoutMs = Number(process.env.SPEECH_TIMEOUT_MS || 300000);
 const extractionTimeoutMs = Number(process.env.EXTRACTION_TIMEOUT_MS || 60000);
+const enablePythonLlm = process.env.ENABLE_PYTHON_LLM === "true";
 const allowedOrigins = (
     process.env.CORS_ORIGIN ||
     "http://localhost:8080,http://127.0.0.1:8080,https://medic-assist-oqco6urvp-akhila-vishwanath-s-projects.vercel.app"
@@ -186,6 +187,10 @@ function buildFallbackMedicalJson(note) {
 }
 
 async function extractMedicalJson(note) {
+    if (!enablePythonLlm) {
+        return buildFallbackMedicalJson(note);
+    }
+
     try {
         const llmOut = await runPython("llm.py", [note], extractionTimeoutMs);
         console.log("\n========== MEDICAL JSON ==========");
