@@ -21,8 +21,8 @@ import {
     showFHIR,
     clearFHIR
 } from "./components/fhirViewer.js";
-import { extractMedicalNote } from "./api-client.js?v=3";
-import { buildFhirBundle } from "./fhir-builder.js?v=3";
+import { extractMedicalNote, transcribeAudio } from "./api-client.js?v=4";
+import { buildFhirBundle } from "./fhir-builder.js?v=4";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -33,6 +33,8 @@ document.addEventListener("DOMContentLoaded", () => {
 const startBtn = document.getElementById("startRecording");
 const stopBtn = document.getElementById("stopRecording");
 const pauseBtn = document.getElementById("pauseRecording");
+const submitAudioBtn = document.getElementById("submitAudio");
+const audioUpload = document.getElementById("audioUpload");
 
 const audioPlayer = document.getElementById("audioPreview");
 const recordingResult = document.getElementById("recordingResult");
@@ -145,6 +147,42 @@ againBtn.addEventListener("click", () => {
 
     indicator.innerHTML = "⚪ Ready to Record";
 
+    recordedAudio = null;
+
+});
+
+submitAudioBtn.addEventListener("click", async () => {
+    const audio = recordedAudio || audioUpload.files[0];
+
+    if (!audio) {
+        showToast("Record or upload an audio file first.", "error");
+        return;
+    }
+
+    submitAudioBtn.disabled = true;
+    submitAudioBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting Audio...';
+    updateSpeechStatus("Transcribing...");
+    updateLLMStatus("Waiting...");
+    updateFHIRStatus("Waiting...");
+
+    try {
+        const result = await transcribeAudio(audio);
+        const bundle = buildFhirBundle(result.medicalJson);
+        showTranscript(result.transcript);
+        showFHIR(bundle);
+        updateSpeechStatus("Completed");
+        updateLLMStatus("Completed");
+        updateFHIRStatus("Completed");
+        showToast("Audio processed successfully!");
+    } catch (error) {
+        updateSpeechStatus("Failed");
+        updateLLMStatus("Failed");
+        updateFHIRStatus("Failed");
+        showToast(error.message || "Unable to process the audio.", "error");
+    } finally {
+        submitAudioBtn.disabled = false;
+        submitAudioBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Submit Audio';
+    }
 });
 
     generateBtn.addEventListener("click", async () => {
