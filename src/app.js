@@ -21,8 +21,8 @@ import {
     showFHIR,
     clearFHIR
 } from "./components/fhirViewer.js";
-import { extractMedicalNote, transcribeAudio } from "./api-client.js?v=5";
-import { buildFhirBundle } from "./fhir-builder.js?v=5";
+import { extractMedicalNote, transcribeAudio } from "./api-client.js?v=6";
+import { buildFhirBundle } from "./fhir-builder.js?v=6";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -45,6 +45,29 @@ const againBtn = document.getElementById("recordAgain");
 
 let recordedAudio = null;
 let paused = false;
+
+function extensionForAudio(type) {
+    if (type.includes("mp4")) return "m4a";
+    if (type.includes("mpeg")) return "mp3";
+    if (type.includes("wav")) return "wav";
+    return "webm";
+}
+
+function setRecordedAudioFile(blob) {
+    const extension = extensionForAudio(blob.type || "");
+    const file = new File([blob], `recording-${Date.now()}.${extension}`, {
+        type: blob.type || "audio/webm"
+    });
+
+    recordedAudio = file;
+    audioPlayer.dataset.hasAudio = "true";
+
+    if (window.DataTransfer) {
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        audioUpload.files = transfer.files;
+    }
+}
 
 async function getSelectedAudio() {
     if (recordedAudio && recordedAudio.size > 0) {
@@ -137,7 +160,7 @@ if (!result || !result.blob || result.blob.size === 0) {
     return;
 }
 
-recordedAudio = result.blob;
+setRecordedAudioFile(result.blob);
     indicator.innerHTML = "✅ Recording Completed";
 
     duration.innerText = `(${result.duration} sec)`;
@@ -166,6 +189,8 @@ document.getElementById("recordingResult").appendChild(link);
 againBtn.addEventListener("click", () => {
 
     audioPlayer.src = "";
+    audioPlayer.removeAttribute("data-has-audio");
+    audioUpload.value = "";
 
     recordingResult.classList.add("hidden");
 
