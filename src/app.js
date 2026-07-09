@@ -21,8 +21,8 @@ import {
     showFHIR,
     clearFHIR
 } from "./components/fhirViewer.js";
-import { extractMedicalNote, transcribeAudio } from "./api-client.js?v=4";
-import { buildFhirBundle } from "./fhir-builder.js?v=4";
+import { extractMedicalNote, transcribeAudio } from "./api-client.js?v=5";
+import { buildFhirBundle } from "./fhir-builder.js?v=5";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -45,6 +45,27 @@ const againBtn = document.getElementById("recordAgain");
 
 let recordedAudio = null;
 let paused = false;
+
+async function getSelectedAudio() {
+    if (recordedAudio && recordedAudio.size > 0) {
+        return recordedAudio;
+    }
+
+    if (audioUpload.files && audioUpload.files[0]) {
+        return audioUpload.files[0];
+    }
+
+    if (audioPlayer.src && audioPlayer.src.startsWith("blob:")) {
+        const response = await fetch(audioPlayer.src);
+        const blob = await response.blob();
+
+        if (blob.size > 0) {
+            return blob;
+        }
+    }
+
+    return null;
+}
 
     resetStatus();
     clearTranscript();
@@ -111,7 +132,10 @@ pauseBtn.addEventListener("click", () => {
 stopBtn.addEventListener("click", async () => {
 const result = await stopRecording();
 
-if (!result) return;
+if (!result || !result.blob || result.blob.size === 0) {
+    showToast("Recording did not save audio. Please record again.", "error");
+    return;
+}
 
 recordedAudio = result.blob;
     indicator.innerHTML = "✅ Recording Completed";
@@ -119,9 +143,11 @@ recordedAudio = result.blob;
     duration.innerText = `(${result.duration} sec)`;
 
     audioPlayer.src = result.url;
+    recordingResult.querySelectorAll(".download-recording").forEach(link => link.remove());
     const link = document.createElement("a");
 link.href = result.url;
 link.download = "recording";
+link.className = "download-recording";
 link.textContent = "Download Recording";
 document.getElementById("recordingResult").appendChild(link);
 
@@ -152,10 +178,10 @@ againBtn.addEventListener("click", () => {
 });
 
 submitAudioBtn.addEventListener("click", async () => {
-    const audio = recordedAudio || audioUpload.files[0];
+    const audio = await getSelectedAudio();
 
     if (!audio) {
-        showToast("Record or upload an audio file first.", "error");
+        showToast("No audio selected. Record or upload an audio file first.", "error");
         return;
     }
 

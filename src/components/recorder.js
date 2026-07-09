@@ -1,6 +1,7 @@
 let mediaRecorder = null;
 let audioChunks = [];
 let stream = null;
+let activeMimeType = "";
 
 let timer = null;
 let seconds = 0;
@@ -13,35 +14,23 @@ export async function startRecording() {
             audio: true
         });
 
-      const options = {};
-     const supportedTypes = [
-    "audio/mp4",
-    "audio/webm",
-    ""
-];
+        const supportedTypes = [
+            "audio/webm;codecs=opus",
+            "audio/webm",
+            "audio/mp4"
+        ];
 
-let selectedType = "";
+        const selectedType = supportedTypes.find(type =>
+            window.MediaRecorder &&
+            MediaRecorder.isTypeSupported(type)
+        );
 
-for (const type of supportedTypes) {
+        mediaRecorder = selectedType
+            ? new MediaRecorder(stream, { mimeType: selectedType })
+            : new MediaRecorder(stream);
 
-    if (type === "" || MediaRecorder.isTypeSupported(type)) {
-
-        selectedType = type;
-
-        break;
-
-    }
-
-}
-
-mediaRecorder = selectedType
-    ? new MediaRecorder(stream, { mimeType: selectedType })
-    : new MediaRecorder(stream);
-
-console.log("Recorder MIME:", mediaRecorder.mimeType);
-
-mediaRecorder = new MediaRecorder(stream, options);
-console.log("Recorder MIME Type:", mediaRecorder.mimeType);
+        activeMimeType = mediaRecorder.mimeType || selectedType || "audio/webm";
+        console.log("Recorder MIME Type:", activeMimeType);
 
         audioChunks = [];
         seconds = 0;
@@ -65,7 +54,7 @@ console.log("Recorder MIME Type:", mediaRecorder.mimeType);
 
 };
 
-        mediaRecorder.start();
+        mediaRecorder.start(1000);
 
         return true;
 
@@ -132,10 +121,10 @@ export function stopRecording() {
         mediaRecorder.onstop = () => {
 
             const blob = new Blob(audioChunks, {
-    type: mediaRecorder.mimeType || audioChunks[0]?.type || "application/octet-stream"
+    type: activeMimeType || audioChunks[0]?.type || "audio/webm"
 });
 
-console.log("Recorder MIME:", mediaRecorder.mimeType);
+console.log("Recorder MIME:", activeMimeType);
 console.log("Blob MIME:", blob.type);
 console.log("Blob Size:", blob.size);
 
