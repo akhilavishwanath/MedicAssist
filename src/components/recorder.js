@@ -108,7 +108,7 @@ export function stopRecording() {
 
     return new Promise((resolve) => {
 
-        if (!mediaRecorder) {
+        if (!mediaRecorder || mediaRecorder.state === "inactive") {
 
             resolve(null);
 
@@ -135,6 +135,9 @@ const url = URL.createObjectURL(blob);
 
             }
 
+            mediaRecorder = null;
+            stream = null;
+
             resolve({
                 blob,
                 url,
@@ -147,6 +150,13 @@ const url = URL.createObjectURL(blob);
 
     });
 
+}
+
+export function hasActiveRecording() {
+    return Boolean(
+        mediaRecorder &&
+        (mediaRecorder.state === "recording" || mediaRecorder.state === "paused")
+    );
 }
 
 function updateTimer() {

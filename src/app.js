@@ -14,15 +14,16 @@ import {
     startRecording,
     stopRecording,
     pauseRecording,
-    resumeRecording
+    resumeRecording,
+    hasActiveRecording
 } from "./components/recorder.js";
 
 import {
     showFHIR,
     clearFHIR
 } from "./components/fhirViewer.js";
-import { extractMedicalNote, transcribeAudio } from "./api-client.js?v=6";
-import { buildFhirBundle } from "./fhir-builder.js?v=6";
+import { extractMedicalNote, transcribeAudio } from "./api-client.js?v=7";
+import { buildFhirBundle } from "./fhir-builder.js?v=7";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -69,6 +70,25 @@ function setRecordedAudioFile(blob) {
     }
 }
 
+function showRecordedAudio(result) {
+    setRecordedAudioFile(result.blob);
+    indicator.innerHTML = "✅ Recording Completed";
+    duration.innerText = `(${result.duration} sec)`;
+
+    audioPlayer.src = result.url;
+    recordingResult.querySelectorAll(".download-recording").forEach(link => link.remove());
+
+    const link = document.createElement("a");
+    link.href = result.url;
+    link.download = recordedAudio?.name || "recording.webm";
+    link.className = "download-recording";
+    link.textContent = "Download Recording";
+    recordingResult.appendChild(link);
+
+    recordingResult.classList.remove("hidden");
+    updateSpeechStatus("Completed");
+}
+
 async function getSelectedAudio() {
     if (recordedAudio && recordedAudio.size > 0) {
         return recordedAudio;
@@ -99,11 +119,17 @@ async function getSelectedAudio() {
 
 startBtn.addEventListener("click", async () => {
 
-    await startRecording();
+    const started = await startRecording();
+
+    if (!started) return;
 
     indicator.innerHTML = "🔴 Recording...";
 
     recordingResult.classList.add("hidden");
+    audioPlayer.src = "";
+    audioPlayer.removeAttribute("data-has-audio");
+    audioUpload.value = "";
+    recordedAudio = null;
 
     paused = false;
 
@@ -160,23 +186,7 @@ if (!result || !result.blob || result.blob.size === 0) {
     return;
 }
 
-setRecordedAudioFile(result.blob);
-    indicator.innerHTML = "✅ Recording Completed";
-
-    duration.innerText = `(${result.duration} sec)`;
-
-    audioPlayer.src = result.url;
-    recordingResult.querySelectorAll(".download-recording").forEach(link => link.remove());
-    const link = document.createElement("a");
-link.href = result.url;
-link.download = "recording";
-link.className = "download-recording";
-link.textContent = "Download Recording";
-document.getElementById("recordingResult").appendChild(link);
-
-    recordingResult.classList.remove("hidden");
-
-    updateSpeechStatus("Completed");
+showRecordedAudio(result);
 
     showToast(`Recording Saved (${result.duration}s)`);
 
@@ -203,14 +213,31 @@ againBtn.addEventListener("click", () => {
 });
 
 submitAudioBtn.addEventListener("click", async () => {
+    submitAudioBtn.disabled = true;
+    submitAudioBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Preparing Audio...';
+
+    if (hasActiveRecording()) {
+        const result = await stopRecording();
+
+        if (!result || !result.blob || result.blob.size === 0) {
+            submitAudioBtn.disabled = false;
+            submitAudioBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Submit Audio';
+            showToast("Recording did not save audio. Please record again.", "error");
+            return;
+        }
+
+        showRecordedAudio(result);
+    }
+
     const audio = await getSelectedAudio();
 
     if (!audio) {
+        submitAudioBtn.disabled = false;
+        submitAudioBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Submit Audio';
         showToast("No audio selected. Record or upload an audio file first.", "error");
         return;
     }
 
-    submitAudioBtn.disabled = true;
     submitAudioBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting Audio...';
     updateSpeechStatus("Transcribing...");
     updateLLMStatus("Waiting...");
