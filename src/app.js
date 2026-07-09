@@ -14,16 +14,15 @@ import {
     startRecording,
     stopRecording,
     pauseRecording,
-    resumeRecording,
-    hasActiveRecording
-} from "./components/recorder.js";
+    resumeRecording
+} from "./components/recorder.js?v=8";
 
 import {
     showFHIR,
     clearFHIR
 } from "./components/fhirViewer.js";
-import { extractMedicalNote, transcribeAudio } from "./api-client.js?v=7";
-import { buildFhirBundle } from "./fhir-builder.js?v=7";
+import { extractMedicalNote, transcribeAudio } from "./api-client.js?v=8";
+import { buildFhirBundle } from "./fhir-builder.js?v=8";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -46,6 +45,7 @@ const againBtn = document.getElementById("recordAgain");
 
 let recordedAudio = null;
 let paused = false;
+let recordingActive = false;
 
 function extensionForAudio(type) {
     if (type.includes("mp4")) return "m4a";
@@ -130,6 +130,7 @@ startBtn.addEventListener("click", async () => {
     audioPlayer.removeAttribute("data-has-audio");
     audioUpload.value = "";
     recordedAudio = null;
+    recordingActive = true;
 
     paused = false;
 
@@ -187,6 +188,7 @@ if (!result || !result.blob || result.blob.size === 0) {
 }
 
 showRecordedAudio(result);
+recordingActive = false;
 
     showToast(`Recording Saved (${result.duration}s)`);
 
@@ -209,6 +211,7 @@ againBtn.addEventListener("click", () => {
     indicator.innerHTML = "⚪ Ready to Record";
 
     recordedAudio = null;
+    recordingActive = false;
 
 });
 
@@ -216,7 +219,7 @@ submitAudioBtn.addEventListener("click", async () => {
     submitAudioBtn.disabled = true;
     submitAudioBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Preparing Audio...';
 
-    if (hasActiveRecording()) {
+    if (recordingActive) {
         const result = await stopRecording();
 
         if (!result || !result.blob || result.blob.size === 0) {
@@ -227,6 +230,7 @@ submitAudioBtn.addEventListener("click", async () => {
         }
 
         showRecordedAudio(result);
+        recordingActive = false;
     }
 
     const audio = await getSelectedAudio();
